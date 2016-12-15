@@ -6,7 +6,7 @@ object ESUtils {
 
   def getDocumentMap(hit: Map[String, Any]): Map[String, Any] = {
     hit.get("_source").map(_.asInstanceOf[Map[String, Any]])
-      .getOrElse(structuredMap(hit("fields").asInstanceOf[Map[String, Any]]))
+      .getOrElse(structuredMap(hit.get("fields").getOrElse(Map.empty).asInstanceOf[Map[String, Any]]))
   }
 
   def structuredMap(map: Map[String, Any]): Map[String, Any] = {

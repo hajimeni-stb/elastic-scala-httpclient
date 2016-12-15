@@ -197,6 +197,28 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     assert(count3 === 99)
   }
 
+  test("noFields"){
+    val config = ESConfig("my_index", "my_type")
+    val client = ESClient("http://localhost:9200", true, true)
+
+    // Register 100 docs
+    (1 to 100).foreach { num =>
+      client.insert(config, Map(
+        "subject" -> s"[$num]Hello World!",
+        "content" -> "This is a first registration test!"
+      ))
+    }
+    client.refresh(config)
+
+
+    val result = client.scroll[Map[String, Any], Map[String, Any]](config){ searcher =>
+      searcher.setNoFields().setQuery(matchAllQuery)
+    }{ case (id, fields) => fields }
+
+    assert(result.size == 100)
+    assert(result.forall(_.isEmpty))
+  }
+
   test("Async client"){
     val config = ESConfig("my_index", "my_type")
     val client = AsyncESClient("http://localhost:9200")
