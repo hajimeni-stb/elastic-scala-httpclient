@@ -31,6 +31,12 @@ private[elasticsearch4s] object JsonUtils {
 
   def serialize(doc: AnyRef): String = mapper.writeValueAsString(doc)
 
-  def deserialize[T](json: String)(implicit c: ClassTag[T]): T = mapper.readValue(json, c.runtimeClass).asInstanceOf[T]
+  def deserialize[T](json: String)(implicit c: ClassTag[T]): T = {
+    if(c.runtimeClass == classOf[Unit]){
+      ().asInstanceOf[T]
+    } else {
+      mapper.readValue(json, c.runtimeClass).asInstanceOf[T]
+    }
+  }
 
 }

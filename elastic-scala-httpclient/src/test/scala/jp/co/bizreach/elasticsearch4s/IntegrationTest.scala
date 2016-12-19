@@ -211,12 +211,12 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     client.refresh(config)
 
 
-    val result = client.scroll[Map[String, Any], Map[String, Any]](config){ searcher =>
+    val result = client.scroll[Unit, Unit](config){ searcher =>
       searcher.setNoFields().setQuery(matchAllQuery)
-    }{ case (id, fields) => fields }
+    }{ case (id, x) => x }
 
     assert(result.size == 100)
-    assert(result.forall(_.isEmpty))
+    assert(result.forall(_ == ()))
   }
 
   test("Async client"){
