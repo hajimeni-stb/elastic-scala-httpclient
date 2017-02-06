@@ -52,11 +52,9 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     node = new EmbeddedNode(environment, Version.CURRENT, plugins)
     node.start()
 
-    //node = NodeBuilder.nodeBuilder().settings(builder).node()
-
     val client = HttpUtils.createHttpClient()
     HttpUtils.post(client, "http://localhost:9200/my_index",
-      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).toString())
+      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).mkString)
     client.close()
 
     ESClient.init()
@@ -117,7 +115,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     intercept[HttpResponseException] {
       // Create existing index to cause HttpResponseException
       HttpUtils.post(client, "http://localhost:9200/my_index",
-        Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).toString())
+        Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).mkString)
     }
     client.close()
   }
@@ -126,7 +124,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     val client = HttpUtils.createHttpClient()
     // Create existing index to cause HttpResponseException
     val f = HttpUtils.postAsync(client, "http://localhost:9200/my_index",
-      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).toString())
+      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).mkString)
 
     intercept[HttpResponseException] {
       Await.result(f, Duration.Inf)
