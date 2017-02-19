@@ -5,7 +5,7 @@ import java.util
 
 import org.apache.commons.io.FileUtils
 import org.elasticsearch.common.settings.Settings
-import org.elasticsearch.node.{Node, NodeBuilder}
+import org.elasticsearch.node.{Node}
 import org.scalatest._
 
 import scala.concurrent.duration.Duration
@@ -39,6 +39,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     val builder = Settings.settingsBuilder
         .put("http.enabled", true)
         .put("http.port", 9200)
+        .put("cluster.name", "elasticsearch-test")
         .put("path.data", "elasticsearch-test-data")
         .put("path.home", "src/test/resources")
 
@@ -52,11 +53,10 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     node = new EmbeddedNode(environment, Version.CURRENT, plugins)
     node.start()
 
-    //node = NodeBuilder.nodeBuilder().settings(builder).node()
 
     val client = HttpUtils.createHttpClient()
     HttpUtils.post(client, "http://localhost:9200/my_index",
-      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).toString())
+      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).mkString)
     client.close()
 
     ESClient.init()
@@ -84,6 +84,14 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     }
 
     assert(result == Some("123", Blog("Hello World!", "This is a first registration test!")))
+  }
+
+  test("Cluster health"){
+    val client = ESClient("http://localhost:9200", true, true)
+
+    val result = client.clusterHealth()
+
+    assert(result.right.get("cluster_name") == "elasticsearch-test")
   }
 
   test("Update partially"){
@@ -117,7 +125,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     intercept[HttpResponseException] {
       // Create existing index to cause HttpResponseException
       HttpUtils.post(client, "http://localhost:9200/my_index",
-        Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).toString())
+        Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).mkString)
     }
     client.close()
   }
@@ -126,7 +134,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     val client = HttpUtils.createHttpClient()
     // Create existing index to cause HttpResponseException
     val f = HttpUtils.postAsync(client, "http://localhost:9200/my_index",
-      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).toString())
+      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).mkString)
 
     intercept[HttpResponseException] {
       Await.result(f, Duration.Inf)

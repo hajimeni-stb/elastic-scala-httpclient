@@ -311,6 +311,12 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
     map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
   }
 
+  def clusterHealth(): Either[Map[String, Any], Map[String, Any]] = {
+    val resultJson = HttpUtils.get(httpClient, s"${url}/_cluster/health")
+    val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
+    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+  }
+
   def scroll[T, R](config: ESConfig)(f: SearchRequestBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     @tailrec
     def scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (String, Map[String, Any]) => R): Stream[R] = {
