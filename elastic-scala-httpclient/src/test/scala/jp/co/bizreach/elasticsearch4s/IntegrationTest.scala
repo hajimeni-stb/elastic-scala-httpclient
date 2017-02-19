@@ -53,7 +53,6 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     node = new EmbeddedNode(environment, Version.CURRENT, plugins)
     node.start()
 
-
     val client = HttpUtils.createHttpClient()
     HttpUtils.post(client, "http://localhost:9200/my_index",
       Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).mkString)
