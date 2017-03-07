@@ -5,6 +5,7 @@ import Utils._
 
 case class ESCodegenConfig(
   outputDir: Option[String],
+  dateType: Option[String], // "joda" or "java8" (default is "joda")
   mappings: Seq[Mapping],
   typeMappings: Option[Map[String, String]]
 )

@@ -127,6 +127,8 @@ object ESSchemaCodeGenerator {
 
   object ClassInfo {
     def apply(mapping: Mapping, config: ESCodegenConfig, name: String, props: Map[String, _]): ClassInfo = {
+      val dateType = config.dateType.getOrElse("joda")
+
       ClassInfo(
         name,
         props
@@ -136,8 +138,10 @@ object ESSchemaCodeGenerator {
           .map { case (key: String, value: Map[String, _] @unchecked) => {
             val typeName = if(value.contains("type")){
               value("type").toString match {
-                case "date" if(value("format").toString == "dateOptionalTime")   => "org.joda.time.DateTime"
-                case "date" if(value("format").toString == "date_optional_time") => "org.joda.time.DateTime"
+                case "date" if(dateType == "joda"  && value("format").toString == "dateOptionalTime"  ) => "org.joda.time.DateTime"
+                case "date" if(dateType == "joda"  && value("format").toString == "date_optional_time") => "org.joda.time.DateTime"
+                case "date" if(dateType == "java8" && value("format").toString == "dateOptionalTime"  ) => "java.time.OffsetDateTime"
+                case "date" if(dateType == "java8" && value("format").toString == "date_optional_time") => "java.time.OffsetDateTime"
                 //case "date" if(value("format").toString.startsWith("yyyy/MM/dd||"))  => "org.joda.time.LocalDate"
                 case "long"      => "Long"
                 case "double"    => "Double"
