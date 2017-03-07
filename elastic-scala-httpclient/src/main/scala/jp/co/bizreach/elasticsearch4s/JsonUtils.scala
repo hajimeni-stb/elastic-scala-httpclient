@@ -1,7 +1,7 @@
 package jp.co.bizreach.elasticsearch4s
 
 import java.time.format.DateTimeFormatter
-import java.time.{OffsetDateTime, ZoneOffset, ZonedDateTime}
+import java.time.{OffsetDateTime, ZoneOffset}
 
 import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
