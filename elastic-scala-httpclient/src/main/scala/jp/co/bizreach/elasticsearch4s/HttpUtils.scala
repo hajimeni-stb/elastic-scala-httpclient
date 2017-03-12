@@ -64,6 +64,12 @@ object HttpUtils {
     }
   }
 
+  def postAsync(httpClient: AsyncHttpClient, url: String, json: String): Future[String] = {
+    withAsyncResultHandler { handler =>
+      httpClient.preparePost(url).setBody(json.getBytes("UTF-8")).execute(handler)
+    }
+  }
+
   def get(httpClient: AsyncHttpClient, url: String): String = {
     val f = httpClient.prepareGet(url).execute()
     val response = f.get()
@@ -74,9 +80,9 @@ object HttpUtils {
     }
   }
 
-  def postAsync(httpClient: AsyncHttpClient, url: String, json: String): Future[String] = {
+  def getAsync(httpClient: AsyncHttpClient, url: String): Future[String] = {
     withAsyncResultHandler { handler =>
-      httpClient.preparePost(url).setBody(json.getBytes("UTF-8")).execute(handler)
+      httpClient.prepareGet(url).execute(handler)
     }
   }
 

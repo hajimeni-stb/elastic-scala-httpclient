@@ -88,9 +88,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
   test("Cluster health"){
     val client = ESClient("http://localhost:9200", true, true)
 
-    val result = client.clusterHealth()
-
-    assert(result.right.get("cluster_name") == "elasticsearch-test")
+    assert(client.clusterHealth().get("cluster_name") == Some("elasticsearch-test"))
   }
 
   test("Update partially"){
@@ -247,6 +245,16 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
     val count = Await.result(f, Duration.Inf)
     assert(count == 100)
+  }
+
+  test("Async cluster health"){
+    val config = ESConfig("my_index", "my_type")
+    val client = AsyncESClient("http://localhost:9200")
+
+    val result = client.clusterHealthAsync(config)
+
+    val clusterHealth = Await.result(result, Duration.Inf)
+    assert(clusterHealth.get("cluster_name") == Some("elasticsearch-test"))
   }
 
 }
