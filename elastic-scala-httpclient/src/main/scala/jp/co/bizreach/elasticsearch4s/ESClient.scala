@@ -139,7 +139,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
       f(searcher)
       logger.debug(s"deleteByQuery:${searcher.toString}")
 
-      val resultJson = HttpUtils.delete(httpClient, config.url(url) + "/_query", searcher.toString)
+      val resultJson = HttpUtils.post(httpClient, config.url(url) + "/_delete_by_query", searcher.toString)
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
     } else {
@@ -314,7 +314,11 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
   def scroll[T, R](config: ESConfig)(f: SearchRequestBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     @tailrec
     def scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (String, Map[String, Any]) => R): Stream[R] = {
-      val resultJson = HttpUtils.post(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+      val resultJson = if(init){
+        HttpUtils.post(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+      } else {
+        HttpUtils.post(httpClient, searchUrl, JsonUtils.serialize(Map("scroll" -> "5m", "scroll_id" -> body)))
+      }
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       if(map.get("error").isDefined){
         throw new RuntimeException(map("error").toString)

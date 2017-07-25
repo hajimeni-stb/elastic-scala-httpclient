@@ -7,7 +7,7 @@ import org.elasticsearch.common.settings.Settings;
 public class QueryBuilderClient extends AbstractClient {
 
     public QueryBuilderClient() {
-        super(Settings.settingsBuilder().build(), null, null);
+        super(Settings.EMPTY, null);
     }
 
     @Override
