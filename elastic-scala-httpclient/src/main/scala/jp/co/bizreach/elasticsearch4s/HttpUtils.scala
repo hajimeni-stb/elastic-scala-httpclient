@@ -70,6 +70,22 @@ object HttpUtils {
     }
   }
 
+  def get(httpClient: AsyncHttpClient, url: String): String = {
+    val f = httpClient.prepareGet(url).execute()
+    val response = f.get()
+    if (response.getStatusCode >= 200 && response.getStatusCode < 300) {
+      response.getResponseBody("UTF-8")
+    } else {
+      throw new HttpResponseException(response)
+    }
+  }
+
+  def getAsync(httpClient: AsyncHttpClient, url: String): Future[String] = {
+    withAsyncResultHandler { handler =>
+      httpClient.prepareGet(url).execute(handler)
+    }
+  }
+
   def delete(httpClient: AsyncHttpClient, url: String, json: String = ""): String = {
     val builder = httpClient.prepareDelete(url)
     if(json.nonEmpty){

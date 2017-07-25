@@ -5,7 +5,7 @@ import java.util
 
 import org.apache.commons.io.FileUtils
 import org.elasticsearch.common.settings.Settings
-import org.elasticsearch.node.{Node, NodeBuilder}
+import org.elasticsearch.node.{Node}
 import org.scalatest._
 
 import scala.concurrent.duration.Duration
@@ -39,6 +39,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     val builder = Settings.settingsBuilder
         .put("http.enabled", true)
         .put("http.port", 9200)
+        .put("cluster.name", "elasticsearch-test")
         .put("path.data", "elasticsearch-test-data")
         .put("path.home", "src/test/resources")
 
@@ -82,6 +83,12 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     }
 
     assert(result == Some("123", Blog("Hello World!", "This is a first registration test!")))
+  }
+
+  test("Cluster health"){
+    val client = ESClient("http://localhost:9200", true, true)
+
+    assert(client.clusterHealth().get("cluster_name") == Some("elasticsearch-test"))
   }
 
   test("Update partially"){
@@ -238,6 +245,16 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
     val count = Await.result(f, Duration.Inf)
     assert(count == 100)
+  }
+
+  test("Async cluster health"){
+    val config = ESConfig("my_index", "my_type")
+    val client = AsyncESClient("http://localhost:9200")
+
+    val result = client.clusterHealthAsync(config)
+
+    val clusterHealth = Await.result(result, Duration.Inf)
+    assert(clusterHealth.get("cluster_name") == Some("elasticsearch-test"))
   }
 
 }
