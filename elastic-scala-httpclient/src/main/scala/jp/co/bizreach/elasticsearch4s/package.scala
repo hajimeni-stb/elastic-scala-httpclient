@@ -1,10 +1,10 @@
 package jp.co.bizreach
 
 import org.apache.lucene.search.join.ScoreMode
-import org.elasticsearch.common.bytes.BytesReference
-import org.elasticsearch.common.geo.builders.ShapeBuilder
-import org.elasticsearch.index.query._
-import org.elasticsearch.index.query.functionscore.{FunctionScoreQueryBuilder, ScoreFunctionBuilder}
+import org.codelibs.elasticsearch.common.bytes.BytesReference
+import org.codelibs.elasticsearch.common.geo.builders.ShapeBuilder
+import org.codelibs.elasticsearch.index.query._
+import org.codelibs.elasticsearch.index.query.functionscore.{FunctionScoreQueryBuilder, ScoreFunctionBuilder}
 
 import scala.reflect.ClassTag
 

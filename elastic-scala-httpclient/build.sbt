@@ -2,13 +2,12 @@ name := "elastic-scala-httpclient"
 
 organization := "jp.co.bizreach"
 
-version := "2.0.6"
+version := "3.0.0-SNAPSHOT"
 
 scalaVersion := "2.12.0"
 
 libraryDependencies ++= Seq(
-//  "org.codelibs"                      %  "elasticsearch-querybuilders"  % "5.2.1-SNAPSHOT",
-  "org.elasticsearch"                 %  "elasticsearch"                % "5.5.0",
+  "org.codelibs"                      %  "elasticsearch-querybuilders"  % "5.2.1-SNAPSHOT",
   "org.slf4j"                         %  "slf4j-api"                    % "1.7.21",
   "joda-time"                         %  "joda-time"                    % "2.9.6",
   "org.joda"                          %  "joda-convert"                 % "1.8.1",

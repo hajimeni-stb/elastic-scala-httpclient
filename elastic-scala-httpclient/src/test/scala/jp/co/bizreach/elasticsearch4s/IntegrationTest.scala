@@ -53,8 +53,8 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
     client.refresh(config)
 
-    val result = client.find[Blog](config){ searcher =>
-      searcher.setQuery(idsQuery("my_type").addIds("123"))
+    val result = client.find[Blog](config){ builder =>
+      builder.query(idsQuery("my_type").addIds("123"))
     }
 
     assert(result == Some("123", Blog("Hello World!", "This is a first registration test!")))
@@ -66,22 +66,22 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
     client.insert(config, "1234", Blog("Hello World!", "This is a registered data"))
     client.refresh(config)
-    val registrationResult = client.find[Blog](config){ searcher =>
-      searcher.setQuery(idsQuery("my_type").addIds("1234"))
+    val registrationResult = client.find[Blog](config){ builder =>
+      builder.query(idsQuery("my_type").addIds("1234"))
     }
     assert(registrationResult == Some("1234", Blog("Hello World!", "This is a registered data")))
 
     client.updatePartially(config, "1234", BlogContent("This is a updated data"))
     client.refresh(config)
-    val updateResult1 = client.find[Blog](config){ searcher =>
-      searcher.setQuery(idsQuery("my_type").addIds("1234"))
+    val updateResult1 = client.find[Blog](config){ builder =>
+      builder.query(idsQuery("my_type").addIds("1234"))
     }
     assert(updateResult1 == Some("1234", Blog("Hello World!", "This is a updated data")))
 
     client.updatePartiallyJson(config, "1234", "{ \"subject\": \"Hello Scala!\" }")
     client.refresh(config)
-    val updateResult2 = client.find[Blog](config){ searcher =>
-      searcher.setQuery(idsQuery("my_type").addIds("1234"))
+    val updateResult2 = client.find[Blog](config){ builder =>
+      builder.query(idsQuery("my_type").addIds("1234"))
     }
     assert(updateResult2 == Some("1234", Blog("Hello Scala!", "This is a updated data")))
   }
@@ -122,40 +122,40 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     client.refresh(config)
 
     // Check doc count
-    val count1 = client.countAsInt(config){ searcher =>
-      searcher.setQuery(matchAllQuery)
+    val count1 = client.countAsInt(config){ builder =>
+      builder.query(matchAllQuery)
     }
     assert(count1 == 100)
 
     // Check doc exists
-    val result1 = client.find[Blog](config){ searcher =>
-      searcher.setQuery(matchPhraseQuery("subject", "10"))
+    val result1 = client.find[Blog](config){ builder =>
+      builder.query(matchPhraseQuery("subject", "10"))
     }
     assert(result1.get._2.subject == "[10]Hello World!")
     assert(result1.get._2.content == "This is a first registration test!")
 
     // Delete 1 doc
 //    client.delete(config, result1.get._1)
-    client.deleteByQuery(config){ searcher =>
-      searcher.setQuery(matchPhraseQuery("subject", "10"))
+    client.deleteByQuery(config){ builder =>
+      builder.query(matchPhraseQuery("subject", "10"))
     }
     client.refresh(config)
 
     // Check doc doesn't exist
-    val result2 = client.find[Blog](config){ searcher =>
-      searcher.setQuery(matchPhraseQuery("subject", "10"))
+    val result2 = client.find[Blog](config){ builder =>
+      builder.query(matchPhraseQuery("subject", "10"))
     }
     assert(result2.isEmpty)
 
     // Check doc count
-    val count2 = client.countAsInt(config){ searcher =>
-      searcher.setQuery(matchAllQuery)
+    val count2 = client.countAsInt(config){ builder =>
+      builder.query(matchAllQuery)
     }
     assert(count2 == 99)
 
     // Scroll search
-    val sum = client.scroll[Blog, Int](config){ searcher =>
-      searcher.setQuery(matchPhraseQuery("subject", "Hello"))
+    val sum = client.scroll[Blog, Int](config){ builder =>
+      builder.query(matchPhraseQuery("subject", "Hello"))
     }{ case (id, blog) =>
       assert(blog.content == "This is a first registration test!")
       1
@@ -185,8 +185,8 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     client.refresh(config)
 
 
-    val result = client.scroll[Unit, Unit](config){ searcher =>
-      searcher.setQuery(matchAllQuery) // no fields??
+    val result = client.scroll[Unit, Unit](config){ builder =>
+      builder.query(matchAllQuery) // no fields??
     }{ case (id, x) => x }
 
     assert(result.size == 100)
@@ -207,8 +207,8 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     val f = for {
       _ <- Future.sequence(seqf)
       _ <- client.refreshAsync(config)
-      count <- client.countAsIntAsync(config) { searcher =>
-        searcher.setQuery(matchAllQuery)
+      count <- client.countAsIntAsync(config) { builder =>
+        builder.query(matchAllQuery)
       }
     } yield count
 
