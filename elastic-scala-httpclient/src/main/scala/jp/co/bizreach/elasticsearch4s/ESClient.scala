@@ -22,10 +22,9 @@ object ESClient {
    */
   def using[T](url: String,
                config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder().build(),
-               deleteByQueryIsAvailable: Boolean = false,
                scriptTemplateIsAvailable: Boolean = false)(f: ESClient => T): T = {
     val httpClient = new AsyncHttpClient(config)
-    val client = new ESClient(httpClient, url, deleteByQueryIsAvailable, scriptTemplateIsAvailable)
+    val client = new ESClient(httpClient, url, scriptTemplateIsAvailable)
     try {
       f(client)
     } finally {
@@ -47,7 +46,7 @@ object ESClient {
     if(httpClient == null){
       throw new IllegalStateException("AsyncHttpClient has not been initialized. Call ESClient.init() at first.")
     }
-    new ESClient(httpClient, url, deleteByQueryIsAvailable, scriptTemplateIsAvailable)
+    new ESClient(httpClient, url, scriptTemplateIsAvailable)
   }
 
   /**
@@ -67,8 +66,7 @@ object ESClient {
 
 }
 
-class ESClient(httpClient: AsyncHttpClient, url: String,
-               deleteByQueryIsAvailable: Boolean = false, scriptTemplateIsAvailable: Boolean = false) {
+class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailable: Boolean = false) {
 
   //private val queryClient = new QueryBuilderClient()
 
@@ -133,19 +131,15 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
    * https://www.elastic.co/guide/en/elasticsearch/plugins/2.3/plugins-delete-by-query.html
    */
   def deleteByQuery(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
-    if(deleteByQueryIsAvailable) {
-      logger.debug("******** ESConfig:" + config.toString)
-      val builder = SearchDslBuilder.builder()
-      f(builder)
-      val json = builder.build()
-      logger.debug(s"deleteByQuery:${json}")
+    logger.debug("******** ESConfig:" + config.toString)
+    val builder = SearchDslBuilder.builder()
+    f(builder)
+    val json = builder.build()
+    logger.debug(s"deleteByQuery:${json}")
 
-      val resultJson = HttpUtils.post(httpClient, config.url(url) + "/_delete_by_query", json)
-      val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
-    } else {
-      throw new UnsupportedOperationException("You can install delete-by-query plugin to use this method.")
-    }
+    val resultJson = HttpUtils.post(httpClient, config.url(url) + "/_delete_by_query", json)
+    val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
+    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
   }
 
   def count(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
