@@ -104,7 +104,7 @@ elastic-scala-codegen can generate source code from Elasticsearch schema json fi
 At first, add following setting into `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("jp.co.bizreach" % "elastic-scala-codegen" % "1.0.6")
+addSbtPlugin("jp.co.bizreach" % "elastic-scala-codegen" % "3.0.0")
 ```
 
 Then put Elasticsearch schema json file as `PROJECT_ROOT/schema.json` and execute `sbt es-codegen`. Source code will be generated into `src/main/scala/models`.

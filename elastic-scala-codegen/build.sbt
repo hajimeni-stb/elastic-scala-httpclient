@@ -4,7 +4,7 @@ name := "elastic-scala-codegen"
 
 organization := "jp.co.bizreach"
 
-version := "1.0.6"
+version := "3.0.0"
 
 scalaVersion := "2.10.6"
 
