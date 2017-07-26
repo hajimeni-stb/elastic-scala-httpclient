@@ -7,7 +7,7 @@ version := "3.0.0-SNAPSHOT"
 scalaVersion := "2.12.0"
 
 libraryDependencies ++= Seq(
-  "org.codelibs"                      %  "elasticsearch-querybuilders"  % "5.2.1-SNAPSHOT",
+  "org.codelibs"                      %  "elasticsearch-querybuilders"  % "5.2.1",
   "org.slf4j"                         %  "slf4j-api"                    % "1.7.21",
   "joda-time"                         %  "joda-time"                    % "2.9.6",
   "org.joda"                          %  "joda-convert"                 % "1.8.1",
@@ -19,8 +19,6 @@ libraryDependencies ++= Seq(
   "org.codelibs"                      %  "elasticsearch-sstmpl"         % "2.4.0"   % "test",
   "org.scalatest"                     %% "scalatest"                    % "3.0.1"   % "test"
 )
-
-resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 publishMavenStyle := true
 
