@@ -288,7 +288,14 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     }
   }
 
-  def scrollAsync[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Future[Stream[R]] = {
+  def clusterHealthAsync(config: ESConfig): Future[Map[String, Any]] = {
+    val future = HttpUtils.getAsync(httpClient, s"${url}/_cluster/health")
+    future.map { resultJson =>
+      JsonUtils.deserialize[Map[String, Any]](resultJson)
+    }
+  }
+
+    def scrollAsync[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Future[Stream[R]] = {
     def scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (String, Map[String, Any]) => R): Future[Stream[R]] = {
       val future = HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
       future.flatMap { resultJson =>

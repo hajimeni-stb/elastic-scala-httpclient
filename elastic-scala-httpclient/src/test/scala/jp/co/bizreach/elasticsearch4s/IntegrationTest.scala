@@ -1,5 +1,6 @@
 package jp.co.bizreach.elasticsearch4s
 
+//>>>>>>> master
 import org.scalatest._
 
 import scala.concurrent.duration.Duration
@@ -21,8 +22,8 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     runner = new ElasticsearchClusterRunner()
     runner.build(ElasticsearchClusterRunner.newConfigs().baseHttpPort(9200).baseTransportPort(9300).numOfNode(1))
 //      .pluginTypes(Seq(
-////        classOf[GroovyPlugin].getName//,
-////        classOf[ScriptTemplatePlugin].getName
+//        classOf[GroovyPlugin].getName,
+//        classOf[ScriptTemplatePlugin].getName
 //      ).mkString(",")))
     runner.ensureYellow()
 
@@ -58,6 +59,12 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     }
 
     assert(result == Some("123", Blog("Hello World!", "This is a first registration test!")))
+  }
+
+  test("Cluster health"){
+    val client = ESClient("http://localhost:9201", true, true)
+
+    assert(client.clusterHealth().get("cluster_name") == Some("elasticsearch-cluster-runner"))
   }
 
   test("Update partially"){
@@ -214,6 +221,16 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
     val count = Await.result(f, Duration.Inf)
     assert(count == 100)
+  }
+
+  test("Async cluster health"){
+    val config = ESConfig("my_index", "my_type")
+    val client = AsyncESClient("http://localhost:9201")
+
+    val result = client.clusterHealthAsync(config)
+
+    val clusterHealth = Await.result(result, Duration.Inf)
+    assert(clusterHealth.get("cluster_name") == Some("elasticsearch-cluster-runner"))
   }
 
 }
