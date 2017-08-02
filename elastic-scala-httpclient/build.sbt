@@ -4,7 +4,9 @@ organization := "jp.co.bizreach"
 
 version := "3.0.0-SNAPSHOT"
 
-scalaVersion := "2.12.0"
+scalaVersion := "2.12.3"
+
+crossScalaVersions := Seq("2.11.8", "2.12.3")
 
 libraryDependencies ++= Seq(
   "org.codelibs"                      %  "elasticsearch-querybuilders"  % "5.2.1",

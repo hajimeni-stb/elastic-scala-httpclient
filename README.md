@@ -5,7 +5,7 @@ Elasticsearch HTTP client for Scala with code generator.
 
 |Client version |Elasticsearch |Scala version |
 |---------------|--------------|--------------|
-|3.0.0          |5.2.x -       |2.12          |
+|3.0.0          |5.2.x -       |2.11 / 2.12   |
 |2.0.4 - 2.0.6  |2.3.5         |2.12          |
 |2.0.0 - 2.0.3  |2.3.5         |2.11          |
 |1.0.6          |1.7.3         |2.11          |
