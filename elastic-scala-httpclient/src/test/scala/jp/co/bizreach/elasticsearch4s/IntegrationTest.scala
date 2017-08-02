@@ -1,37 +1,68 @@
 package jp.co.bizreach.elasticsearch4s
 
-//>>>>>>> master
+import java.io.File
+import java.nio.file.Files
+
 import org.scalatest._
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.io._
 import IntegrationTest._
+import org.apache.commons.io.IOUtils
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner
 import org.elasticsearch.script.groovy.GroovyPlugin
 import org.codelibs.elasticsearch.sstmpl.ScriptTemplatePlugin
+import org.elasticsearch.common.settings.Settings
+import org.elasticsearch.common.settings.Settings.Builder
+import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class IntegrationTest extends FunSuite with BeforeAndAfter {
 
   System.setSecurityManager(null) // to enable execution of script
+
   private var runner: ElasticsearchClusterRunner = null
+  private var esHomeDir: File = null
+
+  private def fromClasspath(path: String): String = {
+    val in = Thread.currentThread.getContextClassLoader.getResourceAsStream(path)
+    try {
+      IOUtils.toString(in, "UTF-8")
+    } finally {
+      in.close()
+    }
+  }
 
   before {
+    esHomeDir = File.createTempFile("eshome", "")
+    esHomeDir.delete()
+
+    val scriptDir = new File(esHomeDir, "config/node_1/scripts")
+    scriptDir.mkdirs()
+
+    val scriptFile = new File(scriptDir, "test_script.groovy")
+    Files.write(scriptFile.toPath, fromClasspath("config/scripts/test_script.groovy").getBytes)
+
     runner = new ElasticsearchClusterRunner()
-    runner.build(ElasticsearchClusterRunner.newConfigs().baseHttpPort(9200).baseTransportPort(9300).numOfNode(1))
-//      .pluginTypes(Seq(
-//        classOf[GroovyPlugin].getName,
-//        classOf[ScriptTemplatePlugin].getName
-//      ).mkString(",")))
+    runner.onBuild((number: Int, settingsBuilder: Builder) => {
+        settingsBuilder.put("script.inline", "on")
+        settingsBuilder.put("script.stored", "on")
+        settingsBuilder.put("script.file", "on")
+        settingsBuilder.put("script.search", "on")
+        settingsBuilder.put("http.cors.enabled", true)
+        settingsBuilder.put("http.cors.allow-origin", "*")
+        settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9310")
+      }
+    ).build(ElasticsearchClusterRunner.newConfigs().baseHttpPort(9200).baseTransportPort(9300).numOfNode(1)
+      .basePath(esHomeDir.getAbsolutePath())
+      .pluginTypes(classOf[ScriptTemplatePlugin].getName))
+
     runner.ensureYellow()
 
-
-
     val client = HttpUtils.createHttpClient()
-    HttpUtils.put(client, "http://localhost:9201/my_index",
-      Source.fromFile("src/test/resources/schema.json")(Codec("UTF-8")).mkString)
+    HttpUtils.put(client, "http://localhost:9201/my_index", fromClasspath("schema.json"))
     client.close()
 
     ESClient.init()
@@ -40,7 +71,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
   after {
     runner.close()
-    runner.clean()
+    esHomeDir.delete()
 
     ESClient.shutdown()
     AsyncESClient.shutdown()
@@ -169,13 +200,13 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     }.sum
     assert(sum == 99)
 
-//    // Count by template
-//    val count3 = client.countByTemplateAsInt(config)(
-//      lang = "groovy",
-//      template = "test_script",
-//      params = Map("subjectValue" -> "Hello")
-//    )
-//    assert(count3 === 99)
+    // Count by template
+    val count3 = client.countByTemplateAsInt(config)(
+      lang = "groovy",
+      template = "test_script",
+      params = Map("subjectValue" -> "Hello")
+    )
+    assert(count3 === 99)
   }
 
   test("noFields"){
@@ -197,7 +228,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     }{ case (id, x) => x }
 
     assert(result.size == 100)
-    assert(result.forall(_ == ()))
+    assert(result.forall { _ == ((): Unit) })
   }
 
   test("Async client"){

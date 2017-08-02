@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   "com.fasterxml.jackson.module"      %% "jackson-module-scala"         % "2.8.4",
   "org.codelibs"                      %  "elasticsearch-cluster-runner" % "5.5.0.0" % "test",
   "org.codelibs.elasticsearch.module" %  "lang-groovy"                  % "5.5.0"   % "test",
-  "org.codelibs"                      %  "elasticsearch-sstmpl"         % "2.4.0"   % "test",
+  "org.codelibs"                      %  "elasticsearch-sstmpl"         % "5.5.0-SNAPSHOT" % "test",
   "org.scalatest"                     %% "scalatest"                    % "3.0.1"   % "test"
 )
 
@@ -29,6 +29,8 @@ publishTo := {
   else
     Some("releases"  at nexus + "service/local/staging/deploy/maven2")
 }
+
+resolvers += Resolver.mavenLocal
 
 scalacOptions := Seq("-deprecation")
 

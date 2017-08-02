@@ -196,15 +196,13 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
       val json = JsonUtils.serialize(
         Map(
           "lang" -> lang,
-          "template" -> Map(
-            "file" -> template
-          ),
+          "file" -> template,
           "params" -> params
         )
       )
       logger.debug(s"searchRequest:${json}")
 
-      val resultJson = HttpUtils.post(httpClient, config.urlWithParameters(url, "_search/template" + options.getOrElse("")), json)
+      val resultJson = HttpUtils.post(httpClient, config.urlWithParameters(url, "_search/script_template" + options.getOrElse("")), json)
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
     } else {
