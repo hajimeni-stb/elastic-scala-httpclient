@@ -2,22 +2,24 @@ name := "elastic-scala-httpclient"
 
 organization := "jp.co.bizreach"
 
-version := "2.0.6"
+version := "3.0.0"
 
-scalaVersion := "2.12.0"
+scalaVersion := "2.12.3"
+
+crossScalaVersions := Seq("2.11.8", "2.12.3")
 
 libraryDependencies ++= Seq(
-  "jp.co.bizreach"               %  "elasticsearch"         % "2.3.5.1",
-  "org.slf4j"                    %  "slf4j-api"             % "1.7.21",
-  "joda-time"                    %  "joda-time"             % "2.9.6",
-  "org.joda"                     %  "joda-convert"          % "1.8.1",
-  "commons-io"                   %  "commons-io"            % "2.5",
-  "com.ning"                     %  "async-http-client"     % "1.9.40",
-  "com.fasterxml.jackson.module" %% "jackson-module-scala"  % "2.8.4",
-  "org.elasticsearch.plugin"     %  "delete-by-query"       % "2.3.5" % "test",
-  "org.elasticsearch.module"     %  "lang-groovy"           % "2.3.5" % "test",
-  "org.codelibs"                 %  "elasticsearch-sstmpl"  % "2.3.1" % "test",
-  "org.scalatest"                %% "scalatest"             % "3.0.1" % "test"
+  "org.codelibs"                      %  "elasticsearch-querybuilders"  % "5.2.1",
+  "org.slf4j"                         %  "slf4j-api"                    % "1.7.21",
+  "joda-time"                         %  "joda-time"                    % "2.9.6",
+  "org.joda"                          %  "joda-convert"                 % "1.8.1",
+  "commons-io"                        %  "commons-io"                   % "2.5",
+  "com.ning"                          %  "async-http-client"            % "1.9.40",
+  "com.fasterxml.jackson.module"      %% "jackson-module-scala"         % "2.8.4",
+  "org.codelibs"                      %  "elasticsearch-cluster-runner" % "5.5.0.0" % "test",
+  "org.codelibs.elasticsearch.module" %  "lang-groovy"                  % "5.5.0"   % "test",
+  "org.codelibs"                      %  "elasticsearch-sstmpl"         % "5.5.0"   % "test",
+  "org.scalatest"                     %% "scalatest"                    % "3.0.1"   % "test"
 )
 
 publishMavenStyle := true

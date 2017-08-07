@@ -1,8 +1,10 @@
 package jp.co.bizreach
 
-import org.elasticsearch.common.geo.builders.ShapeBuilder
-import org.elasticsearch.index.query._
-import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilder
+import org.apache.lucene.search.join.ScoreMode
+import org.codelibs.elasticsearch.common.bytes.BytesReference
+import org.codelibs.elasticsearch.common.geo.builders.ShapeBuilder
+import org.codelibs.elasticsearch.index.query._
+import org.codelibs.elasticsearch.index.query.functionscore.{FunctionScoreQueryBuilder, ScoreFunctionBuilder}
 
 import scala.reflect.ClassTag
 
@@ -35,7 +37,7 @@ package object elasticsearch4s {
   def rangeQuery(name: String) = QueryBuilders.rangeQuery(name)
   def wildcardQuery(name: String, query: String) = QueryBuilders.wildcardQuery(name, query)
   def regexpQuery(name: String, regexp: String) = QueryBuilders.regexpQuery(name, regexp)
-  def boostingQuery = QueryBuilders.boostingQuery
+  def boostingQuery(positiveQuery: QueryBuilder, negativeQuery: QueryBuilder) = QueryBuilders.boostingQuery(positiveQuery, negativeQuery)
   def boolQuery = QueryBuilders.boolQuery
   def spanTermQuery(name: String, value: String) = QueryBuilders.spanTermQuery(name, value)
   def spanTermQuery(name: String, value: Int) = QueryBuilders.spanTermQuery(name, value)
@@ -43,21 +45,18 @@ package object elasticsearch4s {
   def spanTermQuery(name: String, value: Float) = QueryBuilders.spanTermQuery(name, value)
   def spanTermQuery(name: String, value: Double) = QueryBuilders.spanTermQuery(name, value)
   def spanFirstQuery(`match`: SpanQueryBuilder, end: Int) = QueryBuilders.spanFirstQuery(`match`, end)
-  def spanNearQuery = QueryBuilders.spanNearQuery
-  def spanNotQuery = QueryBuilders.spanNotQuery
-  def spanOrQuery = QueryBuilders.spanOrQuery
+  def spanNearQuery(initialClause: SpanQueryBuilder, slop: Int) = QueryBuilders.spanNearQuery(initialClause, slop)
+  def spanNotQuery(initialClause: SpanQueryBuilder, exclude: SpanQueryBuilder) = QueryBuilders.spanNotQuery(initialClause, exclude)
+  def spanOrQuery(initialClause: SpanQueryBuilder) = QueryBuilders.spanOrQuery(initialClause)
   def spanMultiTermQueryBuilder(multiTermQueryBuilder: MultiTermQueryBuilder) = QueryBuilders.spanMultiTermQueryBuilder(multiTermQueryBuilder)
   def fieldMaskingSpanQuery(query: SpanQueryBuilder, field: String) = QueryBuilders.fieldMaskingSpanQuery(query, field)
   def constantScoreQuery(queryBuilder: QueryBuilder) = QueryBuilders.constantScoreQuery(queryBuilder)
   def functionScoreQuery(queryBuilder: QueryBuilder) = QueryBuilders.functionScoreQuery(queryBuilder)
-  def functionScoreQuery = QueryBuilders.functionScoreQuery
-  def functionScoreQuery(function: ScoreFunctionBuilder) = QueryBuilders.functionScoreQuery(function)
-  def functionScoreQuery(queryBuilder: QueryBuilder, function: ScoreFunctionBuilder) = QueryBuilders.functionScoreQuery(queryBuilder, function)
-  def moreLikeThisQuery(fields: String*) = QueryBuilders.moreLikeThisQuery(fields: _*)
-  def moreLikeThisQuery = QueryBuilders.moreLikeThisQuery
-  def hasChildQuery(`type`: String, query: QueryBuilder) = QueryBuilders.hasChildQuery(`type`, query)
-  def hasParentQuery(`type`: String, query: QueryBuilder) = QueryBuilders.hasParentQuery(`type`, query)
-  def nestedQuery(path: String, query: QueryBuilder) = QueryBuilders.nestedQuery(path, query)
+  def functionScoreQuery(queryBuilder: QueryBuilder, filterFunctionBuilders: Array[FunctionScoreQueryBuilder.FilterFunctionBuilder]) = QueryBuilders.functionScoreQuery(queryBuilder, filterFunctionBuilders)
+  def functionScoreQuery[T <: ScoreFunctionBuilder[T]](function: ScoreFunctionBuilder[T]) = QueryBuilders.functionScoreQuery(function)
+  def functionScoreQuery[T <: ScoreFunctionBuilder[T]](queryBuilder: QueryBuilder, function: ScoreFunctionBuilder[T]) = QueryBuilders.functionScoreQuery(queryBuilder, function)
+  def moreLikeThisQuery(likeTexts: String*) = QueryBuilders.moreLikeThisQuery(likeTexts.toArray)
+  def nestedQuery(path: String, query: QueryBuilder, scoreMode: ScoreMode) = QueryBuilders.nestedQuery(path, query, scoreMode)
   def termsQuery[T](name: String, values: T*)(implicit c: ClassTag[T]) = {
     val clazz = c.runtimeClass
     if(clazz == classOf[Int]) {
@@ -74,9 +73,9 @@ package object elasticsearch4s {
       QueryBuilders.termsQuery(name, values.asInstanceOf[Seq[AnyRef]]: _*)
     }
   }
-  def indicesQuery(queryBuilder: QueryBuilder, indices: String*) = QueryBuilders.indicesQuery(queryBuilder, indices: _*)
   def wrapperQuery(source: String) = QueryBuilders.wrapperQuery(source)
-  def wrapperQuery(source: Array[Byte], offset: Int, length: Int) = QueryBuilders.wrapperQuery(source, offset, length)
+  def wrapperQuery(source: Array[Byte]) = QueryBuilders.wrapperQuery(source)
+  def wrapperQuery(source: BytesReference) = QueryBuilders.wrapperQuery(source)
   def geoShapeQuery(name: String, shape: ShapeBuilder) = QueryBuilders.geoShapeQuery(name, shape)
   def geoShapeQuery(name: String, indexedShapeId: String, indexedShapeType: String) = QueryBuilders.geoShapeQuery(name, indexedShapeId, indexedShapeType)
 

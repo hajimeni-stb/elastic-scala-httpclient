@@ -144,8 +144,13 @@ object ESSchemaCodeGenerator {
                 case "date" if(dateType == "java8" && value("format").toString == "date_optional_time") => "java.time.OffsetDateTime"
                 //case "date" if(value("format").toString.startsWith("yyyy/MM/dd||"))  => "org.joda.time.LocalDate"
                 case "long"      => "Long"
+                case "integer"   => "Int"
+                case "short"     => "Short"
                 case "double"    => "Double"
-                case "string"    => "String"
+                case "float"     => "Float"
+                case "string"    => "String" // TODO Not used since Elasticsearch 5.x
+                case "text"      => "String"
+                case "keyword"   => "String"
                 case "boolean"   => "Boolean"
                 case "geo_point" => "GeoPoint"
                 case x           => config.typeMappings.map(_.getOrElse(x, x)).getOrElse(x)

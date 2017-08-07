@@ -1,12 +1,13 @@
 package jp.co.bizreach.elasticsearch4s
 
-import org.elasticsearch.action.search.SearchRequestBuilder
 import ESClient._
 import ESUtils._
 import org.slf4j.LoggerFactory
+
 import scala.reflect.ClassTag
 import scala.annotation.tailrec
 import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
+import org.codelibs.elasticsearch.querybuilders.SearchDslBuilder
 
 /**
  * Helper for accessing to Elasticsearch.
@@ -21,10 +22,9 @@ object ESClient {
    */
   def using[T](url: String,
                config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder().build(),
-               deleteByQueryIsAvailable: Boolean = false,
                scriptTemplateIsAvailable: Boolean = false)(f: ESClient => T): T = {
     val httpClient = new AsyncHttpClient(config)
-    val client = new ESClient(httpClient, url, deleteByQueryIsAvailable, scriptTemplateIsAvailable)
+    val client = new ESClient(httpClient, url, scriptTemplateIsAvailable)
     try {
       f(client)
     } finally {
@@ -46,7 +46,7 @@ object ESClient {
     if(httpClient == null){
       throw new IllegalStateException("AsyncHttpClient has not been initialized. Call ESClient.init() at first.")
     }
-    new ESClient(httpClient, url, deleteByQueryIsAvailable, scriptTemplateIsAvailable)
+    new ESClient(httpClient, url, scriptTemplateIsAvailable)
   }
 
   /**
@@ -66,10 +66,9 @@ object ESClient {
 
 }
 
-class ESClient(httpClient: AsyncHttpClient, url: String,
-               deleteByQueryIsAvailable: Boolean = false, scriptTemplateIsAvailable: Boolean = false) {
+class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailable: Boolean = false) {
 
-  private val queryClient = new QueryBuilderClient()
+  //private val queryClient = new QueryBuilderClient()
 
   def insertJson(config: ESConfig, json: String): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug(s"insertJson:\n${json}")
@@ -131,62 +130,57 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
    * Note: Need delete-by-query plugin to use this method.
    * https://www.elastic.co/guide/en/elasticsearch/plugins/2.3/plugins-delete-by-query.html
    */
-  def deleteByQuery(config: ESConfig)(f: SearchRequestBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
-    if(deleteByQueryIsAvailable) {
-      logger.debug("******** ESConfig:" + config.toString)
-      val searcher = queryClient.prepareSearch(config.indexName)
-      config.typeName.foreach(x => searcher.setTypes(x))
-      f(searcher)
-      logger.debug(s"deleteByQuery:${searcher.toString}")
-
-      val resultJson = HttpUtils.delete(httpClient, config.url(url) + "/_query", searcher.toString)
-      val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
-    } else {
-      throw new UnsupportedOperationException("You can install delete-by-query plugin to use this method.")
-    }
-  }
-
-  def count(config: ESConfig)(f: SearchRequestBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+  def deleteByQuery(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug("******** ESConfig:" + config.toString)
-    val searcher = queryClient.prepareSearch(config.indexName)
-    config.typeName.foreach(x => searcher.setTypes(x))
-    f(searcher)
-    logger.debug(s"countRequest:${searcher.toString}")
+    val builder = SearchDslBuilder.builder()
+    f(builder)
+    val json = builder.build()
+    logger.debug(s"deleteByQuery:${json}")
 
-    val resultJson = HttpUtils.post(httpClient, config.preferenceUrl(url, "_count"), searcher.toString)
+    val resultJson = HttpUtils.post(httpClient, config.url(url) + "/_delete_by_query", json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
   }
 
-  def countAsInt(config: ESConfig)(f: SearchRequestBuilder => Unit): Int = {
+  def count(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+    logger.debug("******** ESConfig:" + config.toString)
+    val builder = SearchDslBuilder.builder()
+    f(builder)
+    val json = builder.build()
+    logger.debug(s"countRequest:${json}")
+
+    val resultJson = HttpUtils.post(httpClient, config.preferenceUrl(url, "_count"), json)
+    val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
+    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+  }
+
+  def countAsInt(config: ESConfig)(f: SearchDslBuilder => Unit): Int = {
     count(config)(f) match {
       case Left(x)  => throw new RuntimeException(x("error").toString)
       case Right(x) => x("count").asInstanceOf[Int]
     }
   }
 
-  def search(config: ESConfig)(f: SearchRequestBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+  def search(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug("******** ESConfig:" + config.toString)
-    val searcher = queryClient.prepareSearch(config.indexName)
-    config.typeName.foreach(x => searcher.setTypes(x))
-    f(searcher)
-    logger.debug(s"searchRequest:${searcher.toString}")
+    val builder = SearchDslBuilder.builder()
+    f(builder)
+    val json = builder.build()
+    logger.debug(s"searchRequest:${json}")
 
-    val resultJson = HttpUtils.post(httpClient, config.preferenceUrl(url, "_search"), searcher.toString)
+    val resultJson = HttpUtils.post(httpClient, config.preferenceUrl(url, "_search"), json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
   }
 
-  def searchAll(config: ESConfig)(f: SearchRequestBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+  def searchAll(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
     count(config)(f) match {
       case Left(x)  => Left(x)
       case Right(x) => {
         val total = x("count").asInstanceOf[Int]
-        search(config) { searcher =>
-          f(searcher)
-          searcher.setFrom(0)
-          searcher.setSize(total)
+        search(config) { builder =>
+          f(builder)
+          builder.from(0).size(total)
         }
       }
     }
@@ -202,15 +196,13 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
       val json = JsonUtils.serialize(
         Map(
           "lang" -> lang,
-          "template" -> Map(
-            "file" -> template
-          ),
+          "file" -> template,
           "params" -> params
         )
       )
       logger.debug(s"searchRequest:${json}")
 
-      val resultJson = HttpUtils.post(httpClient, config.urlWithParameters(url, "_search/template" + options.getOrElse("")), json)
+      val resultJson = HttpUtils.post(httpClient, config.urlWithParameters(url, "_search/script_template" + options.getOrElse("")), json)
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
     } else {
@@ -218,7 +210,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
     }
   }
 
-  def find[T](config: ESConfig)(f: SearchRequestBuilder => Unit)(implicit c: ClassTag[T]): Option[(String, T)] = {
+  def find[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): Option[(String, T)] = {
     search(config)(f) match {
       case Left(x)  => throw new RuntimeException(x("error").toString)
       case Right(x) => {
@@ -232,34 +224,32 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
     }
   }
 
-  def findAsList[T](config: ESConfig)(f: SearchRequestBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
+  def findAsList[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
     search(config)(f) match {
       case Left(x)  => throw new RuntimeException(x("error").toString)
       case Right(x) => createESSearchResult(x).list.map { x => (x.id, x.doc) }
     }
   }
 
-  def findAllAsList[T](config: ESConfig)(f: SearchRequestBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
-    findAsList(config){ searcher =>
-      f(searcher)
-      searcher.setFrom(0)
-      searcher.setSize(countAsInt(config)(f))
+  def findAllAsList[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
+    findAsList(config){ builder =>
+      f(builder)
+      builder.from(0).size(countAsInt(config)(f))
     }
   }
 
 
-  def list[T](config: ESConfig)(f: SearchRequestBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
+  def list[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
     search(config)(f) match {
       case Left(x)  => throw new RuntimeException(x("error").toString)
       case Right(x) => createESSearchResult(x)
     }
   }
 
-  def listAll[T](config: ESConfig)(f: SearchRequestBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
-    list(config){ searcher =>
-      f(searcher)
-      searcher.setFrom(0)
-      searcher.setSize(countAsInt(config)(f))
+  def listAll[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
+    list(config){ builder =>
+      f(builder)
+      builder.from(0).size(countAsInt(config)(f))
     }
   }
 
@@ -316,10 +306,14 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
     JsonUtils.deserialize[Map[String, Any]](resultJson)
   }
 
-  def scroll[T, R](config: ESConfig)(f: SearchRequestBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+  def scroll[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     @tailrec
     def scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (String, Map[String, Any]) => R): Stream[R] = {
-      val resultJson = HttpUtils.post(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+      val resultJson = if(init){
+        HttpUtils.post(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+      } else {
+        HttpUtils.post(httpClient, searchUrl, JsonUtils.serialize(Map("scroll" -> "5m", "scroll_id" -> body)))
+      }
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       if(map.get("error").isDefined){
         throw new RuntimeException(map("error").toString)
@@ -335,16 +329,16 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
     }
 
     logger.debug("******** ESConfig:" + config.toString)
-    val searcher = queryClient.prepareSearch(config.indexName)
-    config.typeName.foreach(x => searcher.setTypes(x))
-    f(searcher)
-    logger.debug(s"searchRequest:${searcher.toString}")
+    val builder = SearchDslBuilder.builder()
+    f(builder)
+    val json = builder.build()
+    logger.debug(s"searchRequest:${json}")
 
-    scroll0(true, config.url(url) + "/_search", searcher.toString, Stream.empty,
+    scroll0(true, config.url(url) + "/_search", json, Stream.empty,
       (_id: String, map: Map[String, Any]) => p(_id, JsonUtils.deserialize[T](JsonUtils.serialize(map))))
   }
 
-  def scrollChunk[T, R](config: ESConfig)(f: SearchRequestBuilder => Unit)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+  def scrollChunk[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     @tailrec
     def scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (Seq[(String, Map[String, Any])]) => R): Stream[R] = {
       val resultJson = HttpUtils.post(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
@@ -363,12 +357,12 @@ class ESClient(httpClient: AsyncHttpClient, url: String,
     }
 
     logger.debug("******** ESConfig:" + config.toString)
-    val searcher = queryClient.prepareSearch(config.indexName)
-    config.typeName.foreach(x => searcher.setTypes(x))
-    f(searcher)
-    logger.debug(s"searchRequest:${searcher.toString}")
+    val builder = SearchDslBuilder.builder()
+    f(builder)
+    val json = builder.build()
+    logger.debug(s"searchRequest:${json}")
 
-    scroll0(true, config.url(url) + "/_search", searcher.toString, Stream.empty,
+    scroll0(true, config.url(url) + "/_search", json, Stream.empty,
       (maps: Seq[(String, Map[String, Any])]) => p(maps.map { case (id, map) =>
         (id, JsonUtils.deserialize[T](JsonUtils.serialize(map)))
       })

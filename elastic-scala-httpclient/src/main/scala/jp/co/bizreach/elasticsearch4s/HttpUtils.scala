@@ -39,7 +39,8 @@ object HttpUtils {
   }
 
   def put(httpClient: AsyncHttpClient, url: String, json: String): String = {
-    val f = httpClient.preparePut(url).setBody(json.getBytes("UTF-8")).execute()
+    val f = httpClient.preparePut(url).setHeader("Content-Type", "application/json")
+      .setBody(json.getBytes("UTF-8")).execute()
     val response = f.get()
     if (response.getStatusCode >= 200 && response.getStatusCode < 300){
       response.getResponseBody("UTF-8")
@@ -50,12 +51,14 @@ object HttpUtils {
 
   def putAsync(httpClient: AsyncHttpClient, url: String, json: String): Future[String] = {
     withAsyncResultHandler { handler =>
-      httpClient.preparePut(url).setBody(json.getBytes("UTF-8")).execute(handler)
+      httpClient.preparePut(url).setHeader("Content-Type", "application/json")
+        .setBody(json.getBytes("UTF-8")).execute(handler)
     }
   }
 
   def post(httpClient: AsyncHttpClient, url: String, json: String): String = {
-    val f = httpClient.preparePost(url).setBody(json.getBytes("UTF-8")).execute()
+    val f = httpClient.preparePost(url).setHeader("Content-Type", "application/json")
+      .setBody(json.getBytes("UTF-8")).execute()
     val response = f.get()
     if (response.getStatusCode >= 200 && response.getStatusCode < 300) {
       response.getResponseBody("UTF-8")
@@ -66,7 +69,8 @@ object HttpUtils {
 
   def postAsync(httpClient: AsyncHttpClient, url: String, json: String): Future[String] = {
     withAsyncResultHandler { handler =>
-      httpClient.preparePost(url).setBody(json.getBytes("UTF-8")).execute(handler)
+      httpClient.preparePost(url).setHeader("Content-Type", "application/json")
+        .setBody(json.getBytes("UTF-8")).execute(handler)
     }
   }
 
@@ -89,7 +93,7 @@ object HttpUtils {
   def delete(httpClient: AsyncHttpClient, url: String, json: String = ""): String = {
     val builder = httpClient.prepareDelete(url)
     if(json.nonEmpty){
-      builder.setBody(json.getBytes("UTF-8"))
+      builder.setHeader("Content-Type", "application/json").setBody(json.getBytes("UTF-8"))
     }
     val f = builder.execute()
     f.get().getResponseBody("UTF-8")
@@ -99,7 +103,7 @@ object HttpUtils {
     withAsyncResultHandler { handler =>
       val builder = httpClient.prepareDelete(url)
       if(json.nonEmpty){
-        builder.setBody(json.getBytes("UTF-8"))
+        builder.setHeader("Content-Type", "application/json").setBody(json.getBytes("UTF-8"))
       }
       builder.execute(handler)
     }

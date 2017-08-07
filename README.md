@@ -5,27 +5,18 @@ Elasticsearch HTTP client for Scala with code generator.
 
 |Client version |Elasticsearch |Scala version |
 |---------------|--------------|--------------|
-|2.0.6          |2.3.5         |2.12          |
-|2.0.5          |2.3.5         |2.12          |
-|2.0.4          |2.3.5         |2.12          |
-|2.0.3          |2.3.5         |2.11          |
-|2.0.2          |2.3.5         |2.11          |
-|2.0.1          |2.3.5         |2.11          |
-|2.0.0          |2.3.5         |2.11          |
+|3.0.0          |5.2.x -       |2.11 / 2.12   |
+|2.0.4 - 2.0.6  |2.3.5         |2.12          |
+|2.0.0 - 2.0.3  |2.3.5         |2.11          |
 |1.0.6          |1.7.3         |2.11          |
-|1.0.5          |1.1.0         |2.11          |
-|1.0.4          |1.1.0         |2.11          |
-|1.0.3          |1.1.0         |2.11          |
-|1.0.2          |1.1.0         |2.11          |
-|1.0.1          |1.1.0         |2.11          |
-|1.0.0          |1.1.0         |2.11          |
+|1.0.0 - 1.0.5  |1.1.0         |2.11          |
 
 ## How to use
 
 Add a following dependency into your `build.sbt` at first.
 
 ```scala
-libraryDependencies += "jp.co.bizreach" %% "elastic-scala-httpclient" % "2.0.6"
+libraryDependencies += "jp.co.bizreach" %% "elastic-scala-httpclient" % "3.0.0"
 ```
 
 You can access Elasticsearch via HTTP Rest API as following:
@@ -55,13 +46,13 @@ ESClient.using("http://localhost:9200"){ client =>
   client.delete(config, "1")
 
   // Find one document
-  val tweet: Option[(String, Tweet)] = client.find[Tweet](config){ searcher =>
-    searcher.setQuery(termQuery("_id", "1"))
+  val tweet: Option[(String, Tweet)] = client.find[Tweet](config){ builder =>
+    builder.query(termQuery("_id", "1"))
   }
 
   // Search documents
-  val list: List[ESSearchResult] = client.list[Tweet](config){ searcher =>
-    searcher.setQuery(termQuery("name", "takezoe"))
+  val list: List[ESSearchResult] = client.list[Tweet](config){ builder =>
+    builder.query(termQuery("name", "takezoe"))
   }
 }
 ```
@@ -91,7 +82,6 @@ Some methods of `ESClient` and `AsyncESClient` need Elasticsearch plug-ins. You 
 
 |Method               |Elasticsearch plug-in                                                                                          |
 |--------------------|----------------------------------------------------------------------------------------------------------------|
-|deleteByQuery       |[delete-by-query plugin](https://www.elastic.co/guide/en/elasticsearch/plugins/2.3/plugins-delete-by-query.html)|
 |searchByTemplate    |[elasticsearch-sstmpl plug-in](https://github.com/codelibs/elasticsearch-sstmpl)                                |
 |listByTemplate      |[elasticsearch-sstmpl plug-in](https://github.com/codelibs/elasticsearch-sstmpl)                                |
 |countByTemplate     |[elasticsearch-sstmpl plug-in](https://github.com/codelibs/elasticsearch-sstmpl)                                |
@@ -100,12 +90,6 @@ Some methods of `ESClient` and `AsyncESClient` need Elasticsearch plug-ins. You 
 Furthermore you have to indicate to enable these methods as follows (In default, these methods throws `IllegalStateException`):
 
 ```scala
-// Enable deleteByQuery method
-ESClient.using("http://localhost:9200",
-  deleteByQueryIsAvailable = true){ client =>
-  ...
-}
-
 // Enable xxxxByTemplate methods
 ESClient.using("http://localhost:9200",
   scriptTemplateIsAvailable = true){ client =>
@@ -120,7 +104,7 @@ elastic-scala-codegen can generate source code from Elasticsearch schema json fi
 At first, add following setting into `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("jp.co.bizreach" % "elastic-scala-codegen" % "1.0.6")
+addSbtPlugin("jp.co.bizreach" % "elastic-scala-codegen" % "3.0.0")
 ```
 
 Then put Elasticsearch schema json file as `PROJECT_ROOT/schema.json` and execute `sbt es-codegen`. Source code will be generated into `src/main/scala/models`.
