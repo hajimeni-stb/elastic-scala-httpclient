@@ -161,11 +161,22 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-  def search(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
-    logger.debug("******** ESConfig:" + config.toString)
+  private def toJson(f: SearchDslBuilder => Unit): String = {
     val builder = SearchDslBuilder.builder()
     f(builder)
-    val json = builder.build()
+    builder.build()
+  }
+
+  def search(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+    logger.debug("******** ESConfig:" + config.toString)
+    val json = toJson(f)
+    logger.debug(s"searchRequest:${json}")
+
+    searchJson(config)(json)
+  }
+
+  def searchJson(config: ESConfig)(json: String): Either[Map[String, Any], Map[String, Any]] = {
+    logger.debug("******** ESConfig:" + config.toString)
     logger.debug(s"searchRequest:${json}")
 
     val resultJson = HttpUtils.post(httpClient, config.preferenceUrl(url, "_search"), json)
@@ -211,7 +222,11 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   }
 
   def find[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): Option[(String, T)] = {
-    search(config)(f) match {
+    findJson(config)(toJson(f))
+  }
+
+  def findJson[T](config: ESConfig)(json: String)(implicit c: ClassTag[T]): Option[(String, T)] = {
+    searchJson(config)(json) match {
       case Left(x)  => throw new RuntimeException(x("error").toString)
       case Right(x) => {
         val hits = x("hits").asInstanceOf[Map[String, Any]]("hits").asInstanceOf[Seq[Map[String, Any]]]
@@ -225,7 +240,11 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   }
 
   def findAsList[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
-    search(config)(f) match {
+    findAsListJson(config)(toJson(f))
+  }
+
+  def findAsListJson[T](config: ESConfig)(json: String)(implicit c: ClassTag[T]): List[(String, T)] = {
+    searchJson(config)(json) match {
       case Left(x)  => throw new RuntimeException(x("error").toString)
       case Right(x) => createESSearchResult(x).list.map { x => (x.id, x.doc) }
     }
@@ -240,7 +259,11 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
 
   def list[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
-    search(config)(f) match {
+    listJson(config)(toJson(f))
+  }
+
+  def listJson[T](config: ESConfig)(json: String)(implicit c: ClassTag[T]): ESSearchResult[T] = {
+    searchJson(config)(json) match {
       case Left(x)  => throw new RuntimeException(x("error").toString)
       case Right(x) => createESSearchResult(x)
     }
