@@ -165,7 +165,7 @@ object ESSchemaCodeGenerator {
               typeName
             }
 
-            val optionType = if(value.get("null_value").isDefined){
+            val optionType = if(value.get("null_value").isDefined || mapping.requiredProperties.exists(_.contains(key))){
               arrayType
             } else {
               s"Option[${arrayType}]"
