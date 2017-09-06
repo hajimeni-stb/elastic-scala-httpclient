@@ -2,7 +2,7 @@ package models
 import Person._
 
 case class Person(
-  name1: Option[Name1], 
+  name1: Option[Name1],
   name2: Option[Name2]
 )
 
@@ -11,11 +11,11 @@ object Person {
   val typeName = "person"
 
   case class Name1(
-    first1: Option[String], 
+    first1: Option[String],
     last1: Option[String]
   )
   case class Name2(
-    first2: Option[String], 
+    first2: Option[String],
     last2: Option[String]
   )
 
