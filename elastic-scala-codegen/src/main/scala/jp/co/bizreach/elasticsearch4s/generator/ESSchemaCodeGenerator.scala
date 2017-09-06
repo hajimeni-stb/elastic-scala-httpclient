@@ -54,7 +54,7 @@ object ESSchemaCodeGenerator {
             sb.append(generateNames("  ", "", prop, tail))
           }
           sb.append("\n")
-          sb.append("}")
+          sb.append("}\n")
 
           val outputDir = config.outputDir.getOrElse("src/main/scala")
           val file = new java.io.File(s"${outputDir}/${mapping.packageName.replace('.', '/')}/${head.name}.scala")
@@ -110,13 +110,13 @@ object ESSchemaCodeGenerator {
       sb.append(indent + s"class ${classInfo.name}(\n")
       sb.append(classInfo.props.map { propInfo =>
         indent + s"  val ${if(isValidIdentifier(propInfo.name)) propInfo.name else s"`${propInfo.name}`"}: ${propInfo.typeName}"
-      }.mkString("", ", \n", "\n"))
+      }.mkString("", ",\n", "\n"))
       sb.append(indent + ")\n")
     } else {
       sb.append(indent + s"case class ${classInfo.name}(\n")
       sb.append(classInfo.props.map { propInfo =>
          indent+ s"  ${if(isValidIdentifier(propInfo.name)) propInfo.name else s"`${propInfo.name}`"}: ${propInfo.typeName}"
-      }.mkString("", ", \n", "\n"))
+      }.mkString("", ",\n", "\n"))
       sb.append(indent + ")\n")
     }
     sb.toString
