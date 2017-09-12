@@ -364,7 +364,11 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   def scrollChunk[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     @tailrec
     def scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (Seq[(String, Map[String, Any])]) => R): Stream[R] = {
-      val resultJson = HttpUtils.post(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+      val resultJson = if(init){
+        HttpUtils.post(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+      } else {
+        HttpUtils.post(httpClient, searchUrl, JsonUtils.serialize(Map("scroll" -> "5m", "scroll_id" -> body)))
+      }
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       if(map.get("error").isDefined){
         throw new RuntimeException(map("error").toString)

@@ -200,6 +200,17 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     }.sum
     assert(sum == 99)
 
+    // Scroll search (chunk)
+    val chunkSum = client.scrollChunk[Blog, Int](config){ builder =>
+      builder.query(matchPhraseQuery("subject", "Hello"))
+    }{ chunk =>
+      chunk.map { case (id, blog) =>
+        assert(blog.content == "This is a first registration test!")
+        1
+      }.sum
+    }.sum
+    assert(chunkSum == 99)
+
     // Count by template
     val count3 = client.countByTemplateAsInt(config)(
       lang = "groovy",
