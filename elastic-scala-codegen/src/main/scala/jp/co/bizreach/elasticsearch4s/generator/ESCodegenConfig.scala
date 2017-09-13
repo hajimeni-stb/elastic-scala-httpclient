@@ -7,8 +7,7 @@ case class ESCodegenConfig(
   outputDir: Option[String],
   dateType: Option[String], // "joda" or "java8" (default is "joda")
   mappings: Seq[Mapping],
-  typeMappings: Option[Map[String, String]],
-  required: Seq[String]
+  typeMappings: Option[Map[String, String]]
 )
 
 case class Mapping(
