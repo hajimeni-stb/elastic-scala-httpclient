@@ -341,6 +341,10 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
       (_id: String, map: Map[String, Any]) => p(_id, JsonUtils.deserialize[T](JsonUtils.serialize(map))))
   }
 
+  /**
+   * Note: Need elasticsearch-sstmpl plugin to use this method.
+   * https://github.com/codelibs/elasticsearch-sstmpl
+   */
   def scrollByTemplate[T, R](config: ESConfig)(lang: String, template: String, params: AnyRef)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     if(scriptTemplateIsAvailable) {
       logger.debug("******** ESConfig:" + config.toString)
@@ -396,6 +400,10 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     )
   }
 
+  /**
+   * Note: Need elasticsearch-sstmpl plugin to use this method.
+   * https://github.com/codelibs/elasticsearch-sstmpl
+   */
   def scrollChunkByTemplate[T, R](config: ESConfig)(lang: String, template: String, params: AnyRef)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     if(scriptTemplateIsAvailable) {
       logger.debug("******** ESConfig:" + config.toString)
