@@ -93,7 +93,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
       )
       logger.debug(s"searchRequest:${json}")
 
-      val future = HttpUtils.postAsync(httpClient, config.urlWithParameters(url, "_search/template" + options.getOrElse("")), json)
+      val future = HttpUtils.postAsync(httpClient, config.urlWithParameters(url, "_search/script_template" + options.getOrElse("")), json)
       future.map { resultJson =>
         val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
         map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
@@ -328,7 +328,11 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
   }
 
   private def _scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (String, Map[String, Any]) => R): Future[Stream[R]] = {
-    val future = HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+    val future = if(init){
+      HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+    } else {
+      HttpUtils.postAsync(httpClient, searchUrl, JsonUtils.serialize(Map("scroll" -> "5m", "scroll_id" -> body)))
+    }
     future.flatMap { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       if(map.get("error").isDefined){
