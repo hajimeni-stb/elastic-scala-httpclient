@@ -173,7 +173,6 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     assert(result1.get._2.content == "This is a first registration test!")
 
     // Delete 1 doc
-//    client.delete(config, result1.get._1)
     client.deleteByQuery(config){ builder =>
       builder.query(matchPhraseQuery("subject", "10"))
     }
@@ -218,6 +217,32 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
       params = Map("subjectValue" -> "Hello")
     )
     assert(count3 === 99)
+
+    // Scroll by template
+    var count4 = 0
+    client.scrollByTemplate[Map[String, Any], Unit](config)(
+      lang = "groovy",
+      template = "test_script",
+      params = Map("subjectValue" -> "Hello")
+    ){ case (id, doc) =>
+      assert(doc("content") == "This is a first registration test!")
+      count4 = count4 + 1
+    }
+    assert(count4 == 99)
+
+    // Scroll chunk by template
+    var count5 = 0
+    client.scrollChunkByTemplate[Map[String, Any], Unit](config)(
+      lang = "groovy",
+      template = "test_script",
+      params = Map("subjectValue" -> "Hello")
+    ){ docs =>
+      docs.foreach { case (id, doc) =>
+        assert(doc("content") == "This is a first registration test!")
+        count5 = count5 + 1
+      }
+    }
+    assert(count5 == 99)
   }
 
   test("noFields"){
