@@ -173,13 +173,21 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     assert(result1.get._2.subject == "[10]Hello World!")
     assert(result1.get._2.content == "This is a first registration test!")
 
-    // Check doc exists (ESSearchResult)
+    // Check doc exists (ESSearchResult / sorted)
     val result2 = client.list[Blog](config){ builder =>
       builder.query(matchPhraseQuery("subject", "10")).sort("date")
     }
     assert(result2.list.size == 1)
     assert(result2.list(0).doc == Blog("[10]Hello World!", "This is a first registration test!", 20171013))
     assert(result2.list(0).sort == Seq(20171013))
+
+    // Check doc exists (ESSearchResult / not sorted)
+    val result3 = client.list[Blog](config){ builder =>
+      builder.query(matchPhraseQuery("subject", "10"))
+    }
+    assert(result3.list.size == 1)
+    assert(result3.list(0).doc == Blog("[10]Hello World!", "This is a first registration test!", 20171013))
+    assert(result3.list(0).sort == Nil)
 
     // Delete 1 doc
     client.deleteByQuery(config){ builder =>
@@ -188,10 +196,10 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     client.refresh(config)
 
     // Check doc doesn't exist
-    val result3 = client.find[Blog](config){ builder =>
+    val result4 = client.find[Blog](config){ builder =>
       builder.query(matchPhraseQuery("subject", "10"))
     }
-    assert(result3.isEmpty)
+    assert(result4.isEmpty)
 
     // Check doc count
     val count2 = client.countAsInt(config){ builder =>
@@ -278,16 +286,18 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
   test("Async client"){
     val config = ESConfig("my_index", "my_type")
-    val client = AsyncESClient("http://localhost:9201")
+
+    val httpClient = HttpUtils.createHttpClient()
+    val client = new AsyncESClient(httpClient, "http://localhost:9201", true)
 
     val seqf = (1 to 100).map { num =>
-      client.insertAsync(config, Map(
+      client.insertAsync(config, num.toString, Map(
         "subject" -> s"[$num]Hello World!",
         "content" -> "This is a first registration test!"
       ))
     }
 
-    val f = for {
+    val f1 = for {
       _ <- Future.sequence(seqf)
       _ <- client.refreshAsync(config)
       count <- client.countAsIntAsync(config) { builder =>
@@ -295,8 +305,24 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
       }
     } yield count
 
-    val count = Await.result(f, Duration.Inf)
-    assert(count == 100)
+    val count1 = Await.result(f1, Duration.Inf)
+    assert(count1 == 100)
+
+    var count2 = 0
+    val f2 = for {
+      _ <- client.deleteAsync(config, "1")
+      _ <- client.refreshAsync(config)
+      _ <- client.scrollByTemplateAsync[Map[String, Any], Unit](config)(
+        lang = "groovy",
+        template = "test_script",
+        params = Map("subjectValue" -> "Hello")
+      ){ case (id, doc) => count2 = count2 + 1 }
+    } yield ()
+
+    Await.result(f2, Duration.Inf)
+    assert(count2 == 99)
+
+    httpClient.close()
   }
 
   test("Async cluster health"){
