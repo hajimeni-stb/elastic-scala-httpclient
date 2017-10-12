@@ -58,7 +58,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     val future = HttpUtils.postAsync(httpClient, config.preferenceUrl(url, "_search"), json)
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
     }
   }
 
@@ -96,7 +96,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
       val future = HttpUtils.postAsync(httpClient, config.urlWithParameters(url, "_search/template" + options.getOrElse("")), json)
       future.map { resultJson =>
         val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-        map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+        map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
       }
     } else {
       throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")
@@ -178,7 +178,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     val future = HttpUtils.postAsync(httpClient, config.url(url), json)
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
     }
   }
 
@@ -188,7 +188,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     val future = HttpUtils.postAsync(httpClient, config.url(url) + "/" + id, json)
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
     }
   }
 
@@ -206,7 +206,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     val future = HttpUtils.putAsync(httpClient, config.url(url) + "/" + id, json)
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
     }
   }
 
@@ -220,7 +220,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     val future = HttpUtils.deleteAsync(httpClient, config.url(url) + "/" + id)
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
     }
   }
 
@@ -236,7 +236,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     val future = HttpUtils.postAsync(httpClient, config.preferenceUrl(url, "_count"), json)
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
     }
   }
 
@@ -282,7 +282,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     val future = HttpUtils.postAsync(httpClient, s"${url}/${config.indexName}/_refresh", "")
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
     }
   }
 

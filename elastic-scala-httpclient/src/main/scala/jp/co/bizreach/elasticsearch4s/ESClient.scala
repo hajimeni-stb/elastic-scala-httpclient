@@ -75,7 +75,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
     val resultJson = HttpUtils.post(httpClient, config.url(url), json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   def insertJson(config: ESConfig, id: String, json: String): Either[Map[String, Any], Map[String, Any]] = {
@@ -83,7 +83,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
     val resultJson = HttpUtils.post(httpClient, config.url(url) + "/" + id, json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   def insert(config: ESConfig, entity: AnyRef):  Either[Map[String, Any], Map[String, Any]] = {
@@ -99,7 +99,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
     val resultJson = HttpUtils.put(httpClient, config.url(url) + "/" + id, json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   def update(config: ESConfig, id: String, entity: AnyRef): Either[Map[String, Any], Map[String, Any]] = {
@@ -111,7 +111,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
     val resultJson = HttpUtils.post(httpClient, config.url(url) + "/" + id + "/_update", "{\"doc\":"+ s"${json}}")
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   def updatePartially(config: ESConfig, id: String, entity: AnyRef): Either[Map[String, Any], Map[String, Any]] = {
@@ -123,7 +123,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
     val resultJson = HttpUtils.delete(httpClient, config.url(url) + "/" + id)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   /**
@@ -139,7 +139,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
     val resultJson = HttpUtils.post(httpClient, config.url(url) + "/_delete_by_query", json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   def count(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
@@ -151,7 +151,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
     val resultJson = HttpUtils.post(httpClient, config.preferenceUrl(url, "_count"), json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   def countAsInt(config: ESConfig)(f: SearchDslBuilder => Unit): Int = {
@@ -181,7 +181,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
     val resultJson = HttpUtils.post(httpClient, config.preferenceUrl(url, "_search"), json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   def searchAll(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
@@ -215,8 +215,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 
       val resultJson = HttpUtils.post(httpClient, config.urlWithParameters(url, "_search/script_template" + options.getOrElse("")), json)
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      // TODO errors?
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
     } else {
       throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")
     }
@@ -322,7 +321,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   def refresh(config: ESConfig)(): Either[Map[String, Any], Map[String, Any]] = {
     val resultJson = HttpUtils.post(httpClient, s"${url}/${config.indexName}/_refresh", "")
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-    map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+    map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
   def clusterHealth(): Map[String, Any] = {
