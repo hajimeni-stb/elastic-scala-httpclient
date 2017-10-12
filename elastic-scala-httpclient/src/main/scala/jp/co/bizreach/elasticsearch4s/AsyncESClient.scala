@@ -87,9 +87,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
       val json = JsonUtils.serialize(
         Map(
           "lang" -> lang,
-          "template" -> Map(
-            "file" -> template
-          ),
+          "file" -> template,
           "params" -> params
         )
       )
@@ -295,65 +293,106 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     }
   }
 
-    def scrollAsync[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Future[Stream[R]] = {
-    def scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (String, Map[String, Any]) => R): Future[Stream[R]] = {
-      val future = HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
-      future.flatMap { resultJson =>
-        val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-        if(map.get("error").isDefined){
-          throw new RuntimeException(map("error").toString)
-        } else {
-          val scrollId = map("_scroll_id").toString
-          val list = map("hits").asInstanceOf[Map[String, Any]]("hits").asInstanceOf[List[Map[String, Any]]]
-          list match {
-            case Nil if init == false => Future(stream)
-            case Nil  => scroll0(false, s"${url}/_search/scroll", scrollId, stream, invoker)
-            case list => scroll0(false, s"${url}/_search/scroll", scrollId, list.map { map => invoker(map("_id").toString, getDocumentMap(map)) }.toStream #::: stream, invoker)
-          }
-        }
-      }
-    }
-
+  def scrollAsync[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Future[Stream[R]] = {
     logger.debug("******** ESConfig:" + config.toString)
     val builder = SearchDslBuilder.builder()
     f(builder)
     val json = builder.build()
     logger.debug(s"searchRequest:${json}")
 
-    scroll0(true, config.url(url) + "/_search", json, Stream.empty,
+    _scroll0(true, config.url(url) + "/_search", json, Stream.empty,
       (_id: String, map: Map[String, Any]) => p(_id, JsonUtils.deserialize[T](JsonUtils.serialize(map))))
   }
 
-  def scrollChunkAsync[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Future[Stream[R]] = {
-    def scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (Seq[(String, Map[String, Any])]) => R): Future[Stream[R]] = {
-      val future = HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
-      future.flatMap { resultJson =>
-        val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-        if(map.get("error").isDefined){
-          throw new RuntimeException(map("error").toString)
-        } else {
-          val scrollId = map("_scroll_id").toString
-          val list = map("hits").asInstanceOf[Map[String, Any]]("hits").asInstanceOf[List[Map[String, Any]]]
-          list match {
-            case Nil if init == false => Future(stream)
-            case Nil  => scroll0(false, s"${url}/_search/scroll", scrollId, stream, invoker)
-            case list => scroll0(false, s"${url}/_search/scroll", scrollId, Seq(invoker(list.map { map => (map("_id").toString, getDocumentMap(map)) })).toStream #::: stream, invoker)
-          }
+  def scrollByTemplateAsync[T, R](config: ESConfig)(lang: String, template: String, params: AnyRef)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Future[Stream[R]] = {
+    if(scriptTemplateIsAvailable) {
+      logger.debug("******** ESConfig:" + config.toString)
+      val json = JsonUtils.serialize(
+        Map(
+          "lang" -> lang,
+          "file" -> template,
+          "params" -> params
+        )
+      )
+      logger.debug(s"searchRequest:${json}")
+
+      _scroll0(true, config.url(url) + "/_search/script_template", json, Stream.empty,
+        (_id: String, map: Map[String, Any]) => p(_id, JsonUtils.deserialize[T](JsonUtils.serialize(map))))
+    } else {
+      throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")
+    }
+  }
+
+  private def _scroll0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (String, Map[String, Any]) => R): Future[Stream[R]] = {
+    val future = HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+    future.flatMap { resultJson =>
+      val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
+      if(map.get("error").isDefined){
+        throw new RuntimeException(map("error").toString)
+      } else {
+        val scrollId = map("_scroll_id").toString
+        val list = map("hits").asInstanceOf[Map[String, Any]]("hits").asInstanceOf[List[Map[String, Any]]]
+        list match {
+          case Nil if init == false => Future(stream)
+          case Nil  => _scroll0(false, s"${url}/_search/scroll", scrollId, stream, invoker)
+          case list => _scroll0(false, s"${url}/_search/scroll", scrollId, list.map { map => invoker(map("_id").toString, getDocumentMap(map)) }.toStream #::: stream, invoker)
         }
       }
     }
+  }
 
+  def scrollChunkAsync[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Future[Stream[R]] = {
     logger.debug("******** ESConfig:" + config.toString)
     val builder = SearchDslBuilder.builder()
     f(builder)
     val json = builder.build()
     logger.debug(s"searchRequest:${json}")
 
-    scroll0(true, config.url(url) + "/_search", json, Stream.empty,
+    _scrollChunk0(true, config.url(url) + "/_search", json, Stream.empty,
       (maps: Seq[(String, Map[String, Any])]) => p(maps.map { case (id, map) =>
         (id, JsonUtils.deserialize[T](JsonUtils.serialize(map)))
       })
     )
+  }
+
+  def scrollChunkByTemplateAsync[T, R](config: ESConfig)(lang: String, template: String, params: AnyRef)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Future[Stream[R]] = {
+    if(scriptTemplateIsAvailable) {
+      logger.debug("******** ESConfig:" + config.toString)
+      val json = JsonUtils.serialize(
+        Map(
+          "lang" -> lang,
+          "file" -> template,
+          "params" -> params
+        )
+      )
+      logger.debug(s"searchRequest:${json}")
+
+      _scrollChunk0(true, config.url(url) + "/_search/script_template", json, Stream.empty,
+        (maps: Seq[(String, Map[String, Any])]) => p(maps.map { case (id, map) =>
+          (id, JsonUtils.deserialize[T](JsonUtils.serialize(map)))
+        })
+      )
+    } else {
+      throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")
+    }
+  }
+
+  private def _scrollChunk0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (Seq[(String, Map[String, Any])]) => R): Future[Stream[R]] = {
+    val future = HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+    future.flatMap { resultJson =>
+      val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
+      if(map.get("error").isDefined){
+        throw new RuntimeException(map("error").toString)
+      } else {
+        val scrollId = map("_scroll_id").toString
+        val list = map("hits").asInstanceOf[Map[String, Any]]("hits").asInstanceOf[List[Map[String, Any]]]
+        list match {
+          case Nil if init == false => Future(stream)
+          case Nil  => _scrollChunk0(false, s"${url}/_search/scroll", scrollId, stream, invoker)
+          case list => _scrollChunk0(false, s"${url}/_search/scroll", scrollId, Seq(invoker(list.map { map => (map("_id").toString, getDocumentMap(map)) })).toStream #::: stream, invoker)
+        }
+      }
+    }
   }
 
   def bulkAsync[T](actions: Seq[BulkAction]): Future[Either[Map[String, Any], Map[String, Any]]] = {
