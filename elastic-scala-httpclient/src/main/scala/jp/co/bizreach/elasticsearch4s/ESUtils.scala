@@ -38,7 +38,8 @@ object ESUtils {
           hit("_score").asInstanceOf[Double],
           JsonUtils.deserialize[T](JsonUtils.serialize(getDocumentMap(hit))),
           hit.get("highlight").asInstanceOf[Option[Map[String, List[String]]]].getOrElse(Map.empty),
-          hit.get("_explanation").asInstanceOf[Option[Map[String, Any]]].getOrElse(Map.empty)
+          hit.get("_explanation").asInstanceOf[Option[Map[String, Any]]].getOrElse(Map.empty),
+          hit.get("sort").asInstanceOf[Option[Seq[Any]]].getOrElse(Nil)
         )
       }.toList,
       x.get("facets").asInstanceOf[Option[Map[String, Map[String, Any]]]].getOrElse(Map.empty),

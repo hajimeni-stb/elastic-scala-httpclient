@@ -81,7 +81,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     val config = ESConfig("my_index", "my_type")
     val client = ESClient("http://localhost:9201", true, true)
 
-    client.insert(config, "123", Blog("Hello World!", "This is a first registration test!"))
+    client.insert(config, "123", Blog("Hello World!", "This is a first registration test!", 20171013))
 
     client.refresh(config)
 
@@ -89,7 +89,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
       builder.query(idsQuery("my_type").addIds("123"))
     }
 
-    assert(result == Some("123", Blog("Hello World!", "This is a first registration test!")))
+    assert(result == Some("123", Blog("Hello World!", "This is a first registration test!", 20171013)))
   }
 
   test("Cluster health"){
@@ -102,26 +102,26 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     val config = ESConfig("my_index", "my_type")
     val client = ESClient("http://localhost:9201", true, true)
 
-    client.insert(config, "1234", Blog("Hello World!", "This is a registered data"))
+    client.insert(config, "1234", Blog("Hello World!", "This is a registered data", 20171013))
     client.refresh(config)
     val registrationResult = client.find[Blog](config){ builder =>
       builder.query(idsQuery("my_type").addIds("1234"))
     }
-    assert(registrationResult == Some("1234", Blog("Hello World!", "This is a registered data")))
+    assert(registrationResult == Some("1234", Blog("Hello World!", "This is a registered data", 20171013)))
 
     client.updatePartially(config, "1234", BlogContent("This is a updated data"))
     client.refresh(config)
     val updateResult1 = client.find[Blog](config){ builder =>
       builder.query(idsQuery("my_type").addIds("1234"))
     }
-    assert(updateResult1 == Some("1234", Blog("Hello World!", "This is a updated data")))
+    assert(updateResult1 == Some("1234", Blog("Hello World!", "This is a updated data", 20171013)))
 
     client.updatePartiallyJson(config, "1234", "{ \"subject\": \"Hello Scala!\" }")
     client.refresh(config)
     val updateResult2 = client.find[Blog](config){ builder =>
       builder.query(idsQuery("my_type").addIds("1234"))
     }
-    assert(updateResult2 == Some("1234", Blog("Hello Scala!", "This is a updated data")))
+    assert(updateResult2 == Some("1234", Blog("Hello Scala!", "This is a updated data", 20171013)))
   }
 
   test("Error response"){
@@ -154,7 +154,8 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     (1 to 100).foreach { num =>
       client.insert(config, Map(
         "subject" -> s"[$num]Hello World!",
-        "content" -> "This is a first registration test!"
+        "content" -> "This is a first registration test!",
+        "date"    -> 20171013
       ))
     }
     client.refresh(config)
@@ -172,6 +173,14 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     assert(result1.get._2.subject == "[10]Hello World!")
     assert(result1.get._2.content == "This is a first registration test!")
 
+    // Check doc exists (ESSearchResult)
+    val result2 = client.list[Blog](config){ builder =>
+      builder.query(matchPhraseQuery("subject", "10")).sort("date")
+    }
+    assert(result2.list.size == 1)
+    assert(result2.list(0).doc == Blog("[10]Hello World!", "This is a first registration test!", 20171013))
+    assert(result2.list(0).sort == Seq(20171013))
+
     // Delete 1 doc
     client.deleteByQuery(config){ builder =>
       builder.query(matchPhraseQuery("subject", "10"))
@@ -179,10 +188,10 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     client.refresh(config)
 
     // Check doc doesn't exist
-    val result2 = client.find[Blog](config){ builder =>
+    val result3 = client.find[Blog](config){ builder =>
       builder.query(matchPhraseQuery("subject", "10"))
     }
-    assert(result2.isEmpty)
+    assert(result3.isEmpty)
 
     // Check doc count
     val count2 = client.countAsInt(config){ builder =>
@@ -303,6 +312,6 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 }
 
 object IntegrationTest {
-  case class Blog(subject: String, content: String)
+  case class Blog(subject: String, content: String, date: Int)
   case class BlogContent(content: String)
 }
