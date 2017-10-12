@@ -360,7 +360,7 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
     val future = HttpUtils.postAsync(httpClient, s"${url}/_bulk", actions.map(_.jsonString).mkString("", "\n", "\n"))
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
-      map.get("error").map { case message: String => Left(map) }.getOrElse(Right(map))
+      map.get("errors").collect { case true => Left(map) }.getOrElse(Right(map))
     }
   }
 
