@@ -412,7 +412,11 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
   }
 
   def bulkAsync[T](actions: Seq[BulkAction]): Future[Either[Map[String, Any], Map[String, Any]]] = {
-    val future = HttpUtils.postAsync(httpClient, s"${url}/_bulk", actions.map(_.jsonString).mkString("", "\n", "\n"))
+    val future = HttpUtils.postAsync(
+      httpClient  = httpClient,
+      url         = s"${url}/_bulk", actions.map(_.jsonString).mkString("", "\n", "\n"),
+      contentType = ContentType.XNDJSON
+    )
     future.map { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       map.get("errors").collect { case true => Left(map) }.getOrElse(Right(map))

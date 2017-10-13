@@ -447,7 +447,6 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-
 //  def scrollAsMap[R](config: ESConfig)(f: SearchRequestBuilder => Unit)(p: Map[String, Any] => R)(implicit c: ClassTag[R]): Stream[R] = {
 //    logger.debug("******** ESConfig:" + config.toString)
 //    val searcher = queryClient.prepareSearch(config.indexName)
@@ -459,7 +458,11 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
 //  }
 
   def bulk[T](actions: Seq[BulkAction]): Either[Map[String, Any], Map[String, Any]] = {
-    val resultJson = HttpUtils.post(httpClient, s"${url}/_bulk", actions.map(_.jsonString).mkString("", "\n", "\n"))
+    val resultJson = HttpUtils.post(
+      httpClient  = httpClient,
+      url         = s"${url}/_bulk", actions.map(_.jsonString).mkString("", "\n", "\n"),
+      contentType = ContentType.XNDJSON
+    )
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("errors").collect { case true => Left(map) }.getOrElse(Right(map))
   }

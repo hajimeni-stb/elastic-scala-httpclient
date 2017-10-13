@@ -24,7 +24,13 @@ class HttpResponseException(status: Int, headers: Seq[(String, String)], body: S
   }
 }
 
+object ContentType {
+  val JSON = "application/json"
+  val XNDJSON = "application/x-ndjson"
+}
+
 object HttpUtils {
+
 
   def createHttpClient(): AsyncHttpClient = {
     new AsyncHttpClient()
@@ -38,8 +44,8 @@ object HttpUtils {
     httpClient.close()
   }
 
-  def put(httpClient: AsyncHttpClient, url: String, json: String): String = {
-    val f = httpClient.preparePut(url).setHeader("Content-Type", "application/json")
+  def put(httpClient: AsyncHttpClient, url: String, json: String, contentType: String = ContentType.JSON): String = {
+    val f = httpClient.preparePut(url).setHeader("Content-Type", contentType)
       .setBody(json.getBytes("UTF-8")).execute()
     val response = f.get()
     if (response.getStatusCode >= 200 && response.getStatusCode < 300){
@@ -49,15 +55,15 @@ object HttpUtils {
     }
   }
 
-  def putAsync(httpClient: AsyncHttpClient, url: String, json: String): Future[String] = {
+  def putAsync(httpClient: AsyncHttpClient, url: String, json: String, contentType: String = ContentType.JSON): Future[String] = {
     withAsyncResultHandler { handler =>
-      httpClient.preparePut(url).setHeader("Content-Type", "application/json")
+      httpClient.preparePut(url).setHeader("Content-Type", contentType)
         .setBody(json.getBytes("UTF-8")).execute(handler)
     }
   }
 
-  def post(httpClient: AsyncHttpClient, url: String, json: String): String = {
-    val f = httpClient.preparePost(url).setHeader("Content-Type", "application/json")
+  def post(httpClient: AsyncHttpClient, url: String, json: String, contentType: String = ContentType.JSON): String = {
+    val f = httpClient.preparePost(url).setHeader("Content-Type", contentType)
       .setBody(json.getBytes("UTF-8")).execute()
     val response = f.get()
     if (response.getStatusCode >= 200 && response.getStatusCode < 300) {
@@ -67,9 +73,9 @@ object HttpUtils {
     }
   }
 
-  def postAsync(httpClient: AsyncHttpClient, url: String, json: String): Future[String] = {
+  def postAsync(httpClient: AsyncHttpClient, url: String, json: String, contentType: String = ContentType.JSON): Future[String] = {
     withAsyncResultHandler { handler =>
-      httpClient.preparePost(url).setHeader("Content-Type", "application/json")
+      httpClient.preparePost(url).setHeader("Content-Type", contentType)
         .setBody(json.getBytes("UTF-8")).execute(handler)
     }
   }
@@ -90,20 +96,20 @@ object HttpUtils {
     }
   }
 
-  def delete(httpClient: AsyncHttpClient, url: String, json: String = ""): String = {
+  def delete(httpClient: AsyncHttpClient, url: String, json: String = "", contentType: String = ContentType.JSON): String = {
     val builder = httpClient.prepareDelete(url)
     if(json.nonEmpty){
-      builder.setHeader("Content-Type", "application/json").setBody(json.getBytes("UTF-8"))
+      builder.setHeader("Content-Type", contentType).setBody(json.getBytes("UTF-8"))
     }
     val f = builder.execute()
     f.get().getResponseBody("UTF-8")
   }
 
-  def deleteAsync(httpClient: AsyncHttpClient, url: String, json: String = ""): Future[String] = {
+  def deleteAsync(httpClient: AsyncHttpClient, url: String, json: String = "", contentType: String = ContentType.JSON): Future[String] = {
     withAsyncResultHandler { handler =>
       val builder = httpClient.prepareDelete(url)
       if(json.nonEmpty){
-        builder.setHeader("Content-Type", "application/json").setBody(json.getBytes("UTF-8"))
+        builder.setHeader("Content-Type", contentType).setBody(json.getBytes("UTF-8"))
       }
       builder.execute(handler)
     }
