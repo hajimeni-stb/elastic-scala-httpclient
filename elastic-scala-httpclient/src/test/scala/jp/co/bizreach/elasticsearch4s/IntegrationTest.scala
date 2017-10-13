@@ -322,6 +322,18 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
     Await.result(f2, Duration.Inf)
     assert(count2 == 99)
 
+    var count3 = 0
+    val f3 = client.scrollChunkByTemplateAsync[Map[String, Any], Unit](config)(
+      lang = "groovy",
+      template = "test_script",
+      params = Map("subjectValue" -> "Hello")
+    ){ docs => docs.map {
+      case (id, doc) => count3 = count3 + 1
+    }}
+
+    Await.result(f3, Duration.Inf)
+    assert(count3 == 99)
+
     httpClient.close()
   }
 

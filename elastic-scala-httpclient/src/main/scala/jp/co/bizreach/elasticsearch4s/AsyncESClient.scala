@@ -390,7 +390,11 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String,
   }
 
   private def _scrollChunk0[R](init: Boolean, searchUrl: String, body: String, stream: Stream[R], invoker: (Seq[(String, Map[String, Any])]) => R): Future[Stream[R]] = {
-    val future = HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+    val future = if(init){
+      HttpUtils.postAsync(httpClient, searchUrl + "?scroll=5m&sort=_doc", body)
+    } else {
+      HttpUtils.postAsync(httpClient, searchUrl, JsonUtils.serialize(Map("scroll" -> "5m", "scroll_id" -> body)))
+    }
     future.flatMap { resultJson =>
       val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
       if(map.get("error").isDefined){
