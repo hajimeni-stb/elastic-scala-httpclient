@@ -2,6 +2,7 @@ package jp.co.bizreach.elasticsearch4s.retry
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.Consumer
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
@@ -17,42 +18,44 @@ class RetryManager {
     override def run(): Unit = {
       while(running.get()){
         val currentTime = System.currentTimeMillis
-        tasks.iterator().forEachRemaining { task =>
-          if(task.nextRun <= currentTime){
-            tasks.remove(task)
+        tasks.iterator().forEachRemaining(new Consumer[RetryTask]{
+          override def accept(task: RetryTask): Unit = {
+            if (task.nextRun <= currentTime) {
+              tasks.remove(task)
 
-            task match {
-              case task: BlockingRetryTask =>
-                try {
-                  val result = task.f()
-                  task.promise.success(result)
-                } catch {
-                  case NonFatal(e) =>
-                    if(task.count == task.config.maxAttempts){
-                      task.promise.failure(e)
-                    } else {
-                      val count = task.count + 1
-                      val nextRun = currentTime + task.config.backOff.nextDuration(count, task.config.retryDuration.toMillis)
-                      tasks.add(new BlockingRetryTask(task.f, task.config, task.promise, nextRun, count))
-                    }
-                }
-              case task: FutureRetryTask =>
-                val future = task.f()
-                future.onComplete {
-                  case Success(v) => task.promise.success(v)
-                  case Failure(e) => {
-                    if(task.count == task.config.maxAttempts){
-                      task.promise.failure(e)
-                    } else {
-                      val count = task.count + 1
-                      val nextRun = currentTime + task.config.backOff.nextDuration(count, task.config.retryDuration.toMillis)
-                      tasks.add(new FutureRetryTask(task.f, task.config, task.ec, task.promise, nextRun, count))
-                    }
+              task match {
+                case task: BlockingRetryTask =>
+                  try {
+                    val result = task.f()
+                    task.promise.success(result)
+                  } catch {
+                    case NonFatal(e) =>
+                      if (task.count == task.config.maxAttempts) {
+                        task.promise.failure(e)
+                      } else {
+                        val count = task.count + 1
+                        val nextRun = currentTime + task.config.backOff.nextDuration(count, task.config.retryDuration.toMillis)
+                        tasks.add(new BlockingRetryTask(task.f, task.config, task.promise, nextRun, count))
+                      }
                   }
-                }(task.ec)
+                case task: FutureRetryTask =>
+                  val future = task.f()
+                  future.onComplete {
+                    case Success(v) => task.promise.success(v)
+                    case Failure(e) => {
+                      if (task.count == task.config.maxAttempts) {
+                        task.promise.failure(e)
+                      } else {
+                        val count = task.count + 1
+                        val nextRun = currentTime + task.config.backOff.nextDuration(count, task.config.retryDuration.toMillis)
+                        tasks.add(new FutureRetryTask(task.f, task.config, task.ec, task.promise, nextRun, count))
+                      }
+                    }
+                  }(task.ec)
+              }
             }
           }
-        }
+        })
       }
       Thread.sleep(100)
     }
