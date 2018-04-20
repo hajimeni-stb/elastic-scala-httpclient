@@ -7,7 +7,10 @@ import org.slf4j.LoggerFactory
 import scala.reflect.ClassTag
 import scala.annotation.tailrec
 import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
+import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig}
 import org.codelibs.elasticsearch.querybuilders.SearchDslBuilder
+
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 /**
  * Helper for accessing to Elasticsearch.
@@ -20,11 +23,14 @@ object ESClient {
   /**
    * This is the entry point of processing using Elasticsearch.
    */
-  def using[T](url: String,
-               config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder().build(),
-               scriptTemplateIsAvailable: Boolean = false)(f: ESClient => T): T = {
+  def using[T](
+    url: String,
+    config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder().build(),
+    scriptTemplateIsAvailable: Boolean = false,
+    retryConfig: RetryConfig = RetryConfig(1, Duration.Zero, FixedBackOff)
+  )(f: ESClient => T): T = {
     val httpClient = new AsyncHttpClient(config)
-    val client = new ESClient(httpClient, url, scriptTemplateIsAvailable)
+    val client = new ESClient(httpClient, url, scriptTemplateIsAvailable)(retryConfig)
     try {
       f(client)
     } finally {
@@ -42,11 +48,11 @@ object ESClient {
   /**
    * Return ESClient instance.
    */
-  def apply(url: String, scriptTemplateIsAvailable: Boolean = false): ESClient = {
+  def apply(url: String, scriptTemplateIsAvailable: Boolean = false, retryConfig: RetryConfig = RetryConfig(1, Duration.Zero, FixedBackOff)): ESClient = {
     if(httpClient == null){
       throw new IllegalStateException("AsyncHttpClient has not been initialized. Call ESClient.init() at first.")
     }
-    new ESClient(httpClient, url, scriptTemplateIsAvailable)
+    new ESClient(httpClient, url, scriptTemplateIsAvailable)(retryConfig)
   }
 
   /**
@@ -66,7 +72,7 @@ object ESClient {
 
 }
 
-class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailable: Boolean = false) {
+class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailable: Boolean = false)(implicit val retryConfig: RetryConfig) {
 
   //private val queryClient = new QueryBuilderClient()
 
