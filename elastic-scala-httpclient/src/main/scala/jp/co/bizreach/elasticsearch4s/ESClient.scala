@@ -42,7 +42,7 @@ object ESClient {
   /**
    * Return ESClient instance.
    */
-  def apply(url: String, deleteByQueryIsAvailable: Boolean = false, scriptTemplateIsAvailable: Boolean = false): ESClient = {
+  def apply(url: String, scriptTemplateIsAvailable: Boolean = false): ESClient = {
     if(httpClient == null){
       throw new IllegalStateException("AsyncHttpClient has not been initialized. Call ESClient.init() at first.")
     }
