@@ -5,17 +5,28 @@ import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
 import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
+import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig, RetryManager}
 import org.codelibs.elasticsearch.querybuilders.SearchDslBuilder
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 object AsyncESClient {
   private var httpClient: AsyncHttpClient = null
 
-  def using[T](url: String, scriptTemplateIsAvailable: Boolean = false)(f: AsyncESClient => Future[T]): Future[T] = {
+  private val retryManager: RetryManager = new RetryManager()
+  sys.ShutdownHookThread {
+    retryManager.shutdown()
+  }
+
+  def using[T](
+    url: String,
+    scriptTemplateIsAvailable: Boolean = false,
+    retryConfig: RetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
+  )(f: AsyncESClient => Future[T]): Future[T] = {
     val httpClient = HttpUtils.createHttpClient()
-    val client = new AsyncESClient(httpClient, url, scriptTemplateIsAvailable)
+    val client = new AsyncESClient(httpClient, url, scriptTemplateIsAvailable)(retryConfig, retryManager)
     val future = f(client)
     future.onComplete { case t =>
       httpClient.close()
@@ -23,11 +34,15 @@ object AsyncESClient {
     future
   }
 
-  def apply(url: String): AsyncESClient = {
+  def apply(
+    url: String,
+    scriptTemplateIsAvailable: Boolean = false,
+    retryConfig: RetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
+  ): AsyncESClient = {
     if(httpClient == null){
       throw new IllegalStateException("AsyncHttpClient has not been initialized. Call AsyncESClient.init() at first.")
     }
-    new AsyncESClient(httpClient, url)
+    new AsyncESClient(httpClient, url, scriptTemplateIsAvailable)(retryConfig, retryManager)
   }
 
   def init() = {
@@ -43,8 +58,8 @@ object AsyncESClient {
   }
 }
 
-class AsyncESClient(httpClient: AsyncHttpClient, url: String,
-                    scriptTemplateIsAvailable: Boolean = false) {
+class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailable: Boolean = false)
+                   (implicit retryConfig: RetryConfig, retryManager: RetryManager) {
 
   val logger = LoggerFactory.getLogger(classOf[AsyncESClient])
 

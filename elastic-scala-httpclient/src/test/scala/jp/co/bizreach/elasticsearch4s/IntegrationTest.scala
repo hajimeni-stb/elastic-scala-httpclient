@@ -9,19 +9,20 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.io._
 import IntegrationTest._
+import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig, RetryManager}
 import org.apache.commons.io.IOUtils
-import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner
-import org.elasticsearch.script.groovy.GroovyPlugin
 import org.codelibs.elasticsearch.sstmpl.ScriptTemplatePlugin
-import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.settings.Settings.Builder
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class IntegrationTest extends FunSuite with BeforeAndAfter {
+class IntegrationTest extends FunSuite with BeforeAndAfter with BeforeAndAfterAll {
 
   System.setSecurityManager(null) // to enable execution of script
+
+  implicit val DefaultRetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
+  implicit val DefaultRetryManager = new RetryManager()
 
   private var runner: ElasticsearchClusterRunner = null
   private var esHomeDir: File = null
@@ -75,6 +76,10 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
     ESClient.shutdown()
     AsyncESClient.shutdown()
+  }
+
+  override def afterAll() = {
+    DefaultRetryManager.shutdown()
   }
 
   test("Insert with id"){
