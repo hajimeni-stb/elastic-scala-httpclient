@@ -27,7 +27,7 @@ object ESClient {
     url: String,
     config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder().build(),
     scriptTemplateIsAvailable: Boolean = false,
-    retryConfig: RetryConfig = RetryConfig(1, Duration.Zero, FixedBackOff)
+    retryConfig: RetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
   )(f: ESClient => T): T = {
     val httpClient = new AsyncHttpClient(config)
     val client = new ESClient(httpClient, url, scriptTemplateIsAvailable)(retryConfig)
@@ -48,7 +48,11 @@ object ESClient {
   /**
    * Return ESClient instance.
    */
-  def apply(url: String, scriptTemplateIsAvailable: Boolean = false, retryConfig: RetryConfig = RetryConfig(1, Duration.Zero, FixedBackOff)): ESClient = {
+  def apply(
+    url: String,
+    scriptTemplateIsAvailable: Boolean = false,
+    retryConfig: RetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
+  ): ESClient = {
     if(httpClient == null){
       throw new IllegalStateException("AsyncHttpClient has not been initialized. Call ESClient.init() at first.")
     }

@@ -23,7 +23,7 @@ object AsyncESClient {
   def using[T](
     url: String,
     scriptTemplateIsAvailable: Boolean = false,
-    retryConfig: RetryConfig = RetryConfig(1, Duration.Zero, FixedBackOff)
+    retryConfig: RetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
   )(f: AsyncESClient => Future[T]): Future[T] = {
     val httpClient = HttpUtils.createHttpClient()
     val client = new AsyncESClient(httpClient, url, scriptTemplateIsAvailable)(retryConfig, retryManager)
@@ -37,7 +37,7 @@ object AsyncESClient {
   def apply(
     url: String,
     scriptTemplateIsAvailable: Boolean = false,
-    retryConfig: RetryConfig = RetryConfig(1, Duration.Zero, FixedBackOff)
+    retryConfig: RetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
   ): AsyncESClient = {
     if(httpClient == null){
       throw new IllegalStateException("AsyncHttpClient has not been initialized. Call AsyncESClient.init() at first.")
