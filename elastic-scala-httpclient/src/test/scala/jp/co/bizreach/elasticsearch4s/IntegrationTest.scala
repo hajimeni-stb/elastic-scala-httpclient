@@ -79,7 +79,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
   test("Insert with id"){
     val config = ESConfig("my_index", "my_type")
-    val client = ESClient("http://localhost:9201", true, true)
+    val client = ESClient("http://localhost:9201", true)
 
     client.insert(config, "123", Blog("Hello World!", "This is a first registration test!", 20171013))
 
@@ -93,14 +93,14 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
   }
 
   test("Cluster health"){
-    val client = ESClient("http://localhost:9201", true, true)
+    val client = ESClient("http://localhost:9201", true)
 
     assert(client.clusterHealth().get("cluster_name") == Some("elasticsearch-cluster-runner"))
   }
 
   test("Update partially"){
     val config = ESConfig("my_index", "my_type")
-    val client = ESClient("http://localhost:9201", true, true)
+    val client = ESClient("http://localhost:9201", true)
 
     client.insert(config, "1234", Blog("Hello World!", "This is a registered data", 20171013))
     client.refresh(config)
@@ -148,7 +148,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
   test("Sync client"){
     val config = ESConfig("my_index", "my_type")
-    val client = ESClient("http://localhost:9201", true, true)
+    val client = ESClient("http://localhost:9201", true)
 
     // Register 100 docs
     (1 to 100).foreach { num =>
@@ -264,7 +264,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter {
 
   test("noFields"){
     val config = ESConfig("my_index", "my_type")
-    val client = ESClient("http://localhost:9201", true, true)
+    val client = ESClient("http://localhost:9201", true)
 
     // Register 100 docs
     (1 to 100).foreach { num =>
