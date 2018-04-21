@@ -23,7 +23,7 @@ package object retry {
     ??? // never come here
   }
 
-  def retryFuture[T](f: => Future[T])(implicit config: RetryConfig, retryManager: RetryManager, ec: ExecutionContext): Future[T] = {
+  def retryFuture[T](f: => Future[T])(implicit config: RetryConfig, retryManager: FutureRetryManager, ec: ExecutionContext): Future[T] = {
     f.failed.flatMap { _ =>
       retryManager.scheduleFuture(f)
     }

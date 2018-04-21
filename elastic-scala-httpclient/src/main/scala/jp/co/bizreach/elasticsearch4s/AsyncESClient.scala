@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
 import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
-import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig, RetryManager}
+import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig, FutureRetryManager}
 import org.codelibs.elasticsearch.querybuilders.SearchDslBuilder
 
 import scala.concurrent._
@@ -15,7 +15,7 @@ import scala.concurrent.duration.Duration
 object AsyncESClient {
   private var httpClient: AsyncHttpClient = null
 
-  private val retryManager: RetryManager = new RetryManager()
+  private val retryManager = new FutureRetryManager()
   sys.ShutdownHookThread {
     retryManager.shutdown()
   }
@@ -59,7 +59,7 @@ object AsyncESClient {
 }
 
 class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailable: Boolean = false)
-                   (implicit retryConfig: RetryConfig, retryManager: RetryManager) {
+                   (implicit retryConfig: RetryConfig, retryManager: FutureRetryManager) {
 
   val logger = LoggerFactory.getLogger(classOf[AsyncESClient])
 

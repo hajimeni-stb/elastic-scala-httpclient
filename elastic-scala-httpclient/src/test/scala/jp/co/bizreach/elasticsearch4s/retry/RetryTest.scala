@@ -40,7 +40,7 @@ class RetryTest extends FunSuite {
 
   test("retryFuture (success)"){
     implicit val retryConfig = RetryConfig(2, 1 second, FixedBackOff)
-    implicit val retryManager = new RetryManager()
+    implicit val retryManager = new FutureRetryManager()
     var count = 0
 
     val f = retryFuture {
@@ -60,7 +60,7 @@ class RetryTest extends FunSuite {
 
   test("retryFuture (failure)"){
     implicit val retryConfig = RetryConfig(2, 1 second, FixedBackOff)
-    implicit val retryManager = new RetryManager()
+    implicit val retryManager = new FutureRetryManager()
     var count = 0
 
     val f = retryFuture {

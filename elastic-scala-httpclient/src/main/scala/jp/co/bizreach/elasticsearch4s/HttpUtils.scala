@@ -61,7 +61,7 @@ object HttpUtils {
   }
 
   def putAsync(httpClient: AsyncHttpClient, url: String, json: String, contentType: String = ContentType.JSON)
-              (implicit retryConfig: RetryConfig, retryManager: RetryManager, ec: ExecutionContext): Future[String] = {
+              (implicit retryConfig: RetryConfig, retryManager: FutureRetryManager, ec: ExecutionContext): Future[String] = {
     retryFuture {
       withAsyncResultHandler { handler =>
         httpClient.preparePut(url).setHeader("Content-Type", contentType)
@@ -85,7 +85,7 @@ object HttpUtils {
   }
 
   def postAsync(httpClient: AsyncHttpClient, url: String, json: String, contentType: String = ContentType.JSON)
-               (implicit retryConfig: RetryConfig, retryManager: RetryManager, ec: ExecutionContext): Future[String] = {
+               (implicit retryConfig: RetryConfig, retryManager: FutureRetryManager, ec: ExecutionContext): Future[String] = {
     retryFuture {
       withAsyncResultHandler { handler =>
         httpClient.preparePost(url).setHeader("Content-Type", contentType)
@@ -107,7 +107,7 @@ object HttpUtils {
   }
 
   def getAsync(httpClient: AsyncHttpClient, url: String)
-              (implicit retryConfig: RetryConfig, retryManager: RetryManager, ec: ExecutionContext): Future[String] = {
+              (implicit retryConfig: RetryConfig, retryManager: FutureRetryManager, ec: ExecutionContext): Future[String] = {
     retryFuture {
       withAsyncResultHandler { handler =>
         httpClient.prepareGet(url).execute(handler)
@@ -128,7 +128,7 @@ object HttpUtils {
   }
 
   def deleteAsync(httpClient: AsyncHttpClient, url: String, json: String = "", contentType: String = ContentType.JSON)
-                 (implicit retryConfig: RetryConfig, retryManager: RetryManager, ec: ExecutionContext): Future[String] = {
+                 (implicit retryConfig: RetryConfig, retryManager: FutureRetryManager, ec: ExecutionContext): Future[String] = {
     retryFuture {
       withAsyncResultHandler { handler =>
         val builder = httpClient.prepareDelete(url)

@@ -9,7 +9,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.io._
 import IntegrationTest._
-import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig, RetryManager}
+import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig, FutureRetryManager}
 import org.apache.commons.io.IOUtils
 import org.codelibs.elasticsearch.sstmpl.ScriptTemplatePlugin
 import org.elasticsearch.common.settings.Settings.Builder
@@ -22,7 +22,7 @@ class IntegrationTest extends FunSuite with BeforeAndAfter with BeforeAndAfterAl
   System.setSecurityManager(null) // to enable execution of script
 
   implicit val DefaultRetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
-  implicit val DefaultRetryManager = new RetryManager()
+  implicit val DefaultRetryManager = new FutureRetryManager()
 
   private var runner: ElasticsearchClusterRunner = null
   private var esHomeDir: File = null
