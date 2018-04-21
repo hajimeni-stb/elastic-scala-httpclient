@@ -16,7 +16,7 @@ Elasticsearch HTTP client for Scala with code generator.
 Add a following dependency into your `build.sbt` at first.
 
 ```scala
-libraryDependencies += "jp.co.bizreach" %% "elastic-scala-httpclient" % "3.1.1"
+libraryDependencies += "jp.co.bizreach" %% "elastic-scala-httpclient" % "3.2.0"
 ```
 
 You can access Elasticsearch via HTTP Rest API as following:
@@ -63,7 +63,7 @@ If you have to recycle `ESClient` instance, you can manage lyfecycle of `ESClien
 // Call this method once before using ESClient
 ESClient.init()
 
-val client = ESClient(""http://localhost:9200"")
+val client = ESClient("http://localhost:9200")
 val config = "twitter" / "tweet"
 
 client.insert(config, Tweet("takezoe", "Hello World!!"))
@@ -96,6 +96,40 @@ ESClient.using("http://localhost:9200",
   ...
 }
 ```
+
+## Retry
+
+`ESClient` and `AsyncESClient` support automatic retry. Give `RetryConfig` to enable it.
+
+```scala
+import jp.co.bizreach.elasticsearch4s._
+import jp.co.bizreach.elasticsearch4s.retry._
+
+ESClient.using("http://localhost:9200",
+  retryConfig = RetryConfig(
+    attempts = 2,
+    duration = 1.second,
+    backOff = FixedBackOff
+  )){ client =>
+  ...
+}
+```
+
+or
+
+```scala
+val client = ESClient("http://localhost:9200",
+  retryConfig = RetryConfig(
+    attempts = 2,
+    duration = 1.second,
+    backOff = FixedBackOff
+  )  
+)
+```
+
+- `attempts`: Max attenpts to retry. 0 means no retry.
+- `duration`: Duration until next retry. Actual duration is calculated by this parameter and the back off strategy.
+- `backOff`: `FixedBackOff`, `LinerBackOff` and `ExponentialBackOff` are available.
 
 ## Code Generator
 
