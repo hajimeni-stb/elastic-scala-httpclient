@@ -18,7 +18,7 @@ class RetryManager {
     override def run(): Unit = {
       while(running.get()){
         val currentTime = System.currentTimeMillis
-        tasks.iterator().forEachRemaining(new Consumer[RetryTask]{
+        tasks.iterator().forEachRemaining(new Consumer[RetryTask]{ // TODO Not use partial function for Scala 2.11 cross build
           override def accept(task: RetryTask): Unit = {
             if (task.nextRun <= currentTime) {
               tasks.remove(task)
@@ -63,12 +63,12 @@ class RetryManager {
 
   thread.start()
 
-  def schedule[T](f: => T)(implicit config: RetryConfig): Future[T] = {
-    val promise = Promise[T]()
-    val task = new BlockingRetryTask(() => f, config, promise.asInstanceOf[Promise[Any]], System.currentTimeMillis + config.retryDuration.toMillis)
-    tasks.add(task)
-    promise.future
-  }
+//  def schedule[T](f: => T)(implicit config: RetryConfig): Future[T] = {
+//    val promise = Promise[T]()
+//    val task = new BlockingRetryTask(() => f, config, promise.asInstanceOf[Promise[Any]], System.currentTimeMillis + config.retryDuration.toMillis)
+//    tasks.add(task)
+//    promise.future
+//  }
 
   def scheduleFuture[T](f: => Future[T])(implicit config: RetryConfig, ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]()

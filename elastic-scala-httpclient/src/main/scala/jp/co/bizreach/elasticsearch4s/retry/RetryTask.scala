@@ -11,7 +11,7 @@ private[retry] class BlockingRetryTask(
   val config: RetryConfig,
   val promise: Promise[Any],
   val nextRun: Long,
-  val count: Int = 0
+  val count: Int = 1
 ) extends RetryTask
 
 private[retry] class FutureRetryTask(
@@ -20,5 +20,5 @@ private[retry] class FutureRetryTask(
   val ec: ExecutionContext,
   val promise: Promise[Any],
   val nextRun: Long,
-  val count: Int = 0
+  val count: Int = 1
 ) extends RetryTask

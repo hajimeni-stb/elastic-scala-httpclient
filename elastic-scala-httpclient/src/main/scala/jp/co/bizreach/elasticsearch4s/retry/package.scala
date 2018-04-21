@@ -24,7 +24,9 @@ package object retry {
   }
 
   def retryFuture[T](f: => Future[T])(implicit config: RetryConfig, retryManager: RetryManager, ec: ExecutionContext): Future[T] = {
-    retryManager.scheduleFuture(f)
+    f.failed.flatMap { _ =>
+      retryManager.scheduleFuture(f)
+    }
   }
 
 }
