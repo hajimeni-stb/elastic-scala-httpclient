@@ -23,8 +23,15 @@ package object retry {
     ??? // never come here
   }
 
-  def retryFuture[T](f: => Future[T])(implicit config: RetryConfig, retryManager: RetryManager, ec: ExecutionContext): Future[T] = {
-    retryManager.scheduleFuture(f)
+  def retryFuture[T](f: => Future[T])(implicit config: RetryConfig, retryManager: FutureRetryManager, ec: ExecutionContext): Future[T] = {
+    val future = f
+    if(config.maxAttempts > 0){
+      future.recoverWith { case _ =>
+        retryManager.scheduleFuture(f)
+      }
+    } else {
+      future
+    }
   }
 
 }
