@@ -1,5 +1,7 @@
 package jp.co.bizreach.elasticsearch4s.retry
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+
 import org.scalatest.FunSuite
 
 import scala.concurrent.{Await, Future}
@@ -78,6 +80,36 @@ class RetryTest extends FunSuite {
     }
 
     retryManager.shutdown()
+  }
+
+  test("BackOff is serializable"){
+    {
+      val out = new ByteArrayOutputStream()
+      new ObjectOutputStream(out).writeObject(LinerBackOff)
+
+      val in = new ByteArrayInputStream(out.toByteArray)
+      val backOff = new ObjectInputStream(in).readObject()
+
+      assert(backOff == LinerBackOff)
+    }
+    {
+      val out = new ByteArrayOutputStream()
+      new ObjectOutputStream(out).writeObject(ExponentialBackOff)
+
+      val in = new ByteArrayInputStream(out.toByteArray)
+      val backOff = new ObjectInputStream(in).readObject()
+
+      assert(backOff == ExponentialBackOff)
+    }
+    {
+      val out = new ByteArrayOutputStream()
+      new ObjectOutputStream(out).writeObject(FixedBackOff)
+
+      val in = new ByteArrayInputStream(out.toByteArray)
+      val backOff = new ObjectInputStream(in).readObject()
+
+      assert(backOff == FixedBackOff)
+    }
   }
 
 }
