@@ -1,6 +1,6 @@
 package jp.co.bizreach.elasticsearch4s.retry
 
-sealed trait BackOff {
+sealed trait BackOff extends java.io.Serializable {
   def nextDuration(count: Int, duration: Long): Long
 }
 
