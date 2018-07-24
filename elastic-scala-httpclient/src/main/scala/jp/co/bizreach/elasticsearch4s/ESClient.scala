@@ -10,7 +10,6 @@ import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
 import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig}
 import org.codelibs.elasticsearch.querybuilders.SearchDslBuilder
 
-import scala.concurrent.Future
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 /**
