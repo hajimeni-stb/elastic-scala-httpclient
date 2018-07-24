@@ -10,6 +10,7 @@ import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
 import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig}
 import org.codelibs.elasticsearch.querybuilders.SearchDslBuilder
 
+import scala.concurrent.Future
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 /**
@@ -455,6 +456,16 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
         case list => _scrollChunk0(false, s"${url}/_search/scroll", scrollId, Seq(invoker(list.map { map => (map("_id").toString, getDocumentMap(map)) })).toStream #::: stream, invoker)
       }
     }
+  }
+
+  def scrollJson[T, R](config: ESConfig, json: String)(f: SearchDslBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+    logger.debug("******** ESConfig:" + config.toString)
+    val builder = SearchDslBuilder.builder()
+    f(builder)
+    logger.debug(s"searchRequest:${json}")
+
+    _scroll0(true, config.url(url) + "/_search", json, Stream.empty,
+      (_id: String, map: Map[String, Any]) => p(_id, JsonUtils.deserialize[T](JsonUtils.serialize(map))))
   }
 
 //  def scrollAsMap[R](config: ESConfig)(f: SearchRequestBuilder => Unit)(p: Map[String, Any] => R)(implicit c: ClassTag[R]): Stream[R] = {
