@@ -457,6 +457,14 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
+  def scrollJson[T, R](config: ESConfig, json: String)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+    logger.debug("******** ESConfig:" + config.toString)
+    logger.debug(s"searchRequest:${json}")
+
+    _scroll0(true, config.url(url) + "/_search", json, Stream.empty,
+      (_id: String, map: Map[String, Any]) => p(_id, JsonUtils.deserialize[T](JsonUtils.serialize(map))))
+  }
+
 //  def scrollAsMap[R](config: ESConfig)(f: SearchRequestBuilder => Unit)(p: Map[String, Any] => R)(implicit c: ClassTag[R]): Stream[R] = {
 //    logger.debug("******** ESConfig:" + config.toString)
 //    val searcher = queryClient.prepareSearch(config.indexName)
