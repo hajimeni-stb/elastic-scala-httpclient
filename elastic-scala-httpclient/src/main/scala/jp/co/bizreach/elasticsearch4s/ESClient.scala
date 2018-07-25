@@ -457,10 +457,8 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-  def scrollJson[T, R](config: ESConfig, json: String)(f: SearchDslBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+  def scrollJson[T, R](config: ESConfig, json: String)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     logger.debug("******** ESConfig:" + config.toString)
-    val builder = SearchDslBuilder.builder()
-    f(builder)
     logger.debug(s"searchRequest:${json}")
 
     _scroll0(true, config.url(url) + "/_search", json, Stream.empty,
