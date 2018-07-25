@@ -265,6 +265,16 @@ class IntegrationTest extends FunSuite with BeforeAndAfter with BeforeAndAfterAl
       }
     }
     assert(count5 == 99)
+
+    // Scroll by Json search
+    val jsonRequest = """{"query": {"match_all": {}}, "size": 1}"""
+    val sum2 = client.scrollJson[Blog, Int](config, jsonRequest){ builder =>
+      builder.query(matchPhraseQuery("subject", "Hello"))
+    }{ case (id, blog) =>
+      assert(blog.content == "This is a first registration test!")
+      1
+    }.sum
+    assert(sum2 == 99)
   }
 
   test("noFields"){
