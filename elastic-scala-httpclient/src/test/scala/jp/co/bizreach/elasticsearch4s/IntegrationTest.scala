@@ -321,8 +321,27 @@ class IntegrationTest extends FunSuite with BeforeAndAfter with BeforeAndAfterAl
     val count1 = Await.result(f1, Duration.Inf)
     assert(count1 == 100)
 
-    var count2 = 0
     val f2 = for {
+      list <- client.findAllAsListAsync[Unit](config) { builder =>
+        builder.query(matchAllQuery)
+      }
+    } yield list
+
+    val list1 = Await.result(f2, Duration.Inf)
+    assert(list1.size == 100)
+
+    val f3 = for {
+      result <- client.listAllAsync[Unit](config) { builder =>
+        builder.query(matchAllQuery)
+      }
+    } yield result
+
+    val result1 = Await.result(f3, Duration.Inf)
+    assert(result1.totalHits == 100)
+    assert(result1.list.size == 100)
+
+    var count2 = 0
+    val f4 = for {
       _ <- client.deleteAsync(config, "1")
       _ <- client.refreshAsync(config)
       _ <- client.scrollByTemplateAsync[Map[String, Any], Unit](config)(
@@ -332,19 +351,19 @@ class IntegrationTest extends FunSuite with BeforeAndAfter with BeforeAndAfterAl
       ){ case (id, doc) => count2 = count2 + 1 }
     } yield ()
 
-    Await.result(f2, Duration.Inf)
+    Await.result(f4, Duration.Inf)
     assert(count2 == 99)
 
     var count3 = 0
-    val f3 = client.scrollChunkByTemplateAsync[Map[String, Any], Unit](config)(
+    val f5 = client.scrollChunkByTemplateAsync[Map[String, Any], Unit](config)(
       lang = "groovy",
       template = "test_script",
       params = Map("subjectValue" -> "Hello")
-    ){ docs => docs.map {
+    ){ docs => docs.foreach {
       case (id, doc) => count3 = count3 + 1
     }}
 
-    Await.result(f3, Duration.Inf)
+    Await.result(f5, Duration.Inf)
     assert(count3 == 99)
 
     httpClient.close()

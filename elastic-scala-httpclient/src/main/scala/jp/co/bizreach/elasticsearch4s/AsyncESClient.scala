@@ -78,15 +78,13 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAv
   }
 
   def searchAllAsync(config: ESConfig)(f: SearchDslBuilder => Unit): Future[Either[Map[String, Any], Map[String, Any]]] = {
-    countAsync(config)(f).flatMap { result =>
-      result match {
-        case Left(x)  => Future(Left(x))
-        case Right(x) => {
-          val total = x("count").asInstanceOf[Int]
-          searchAsync(config) { builder =>
-            f(builder)
-            builder.from(0).size(total)
-          }
+    countAsync(config)(f).flatMap {
+      case Left(x)  => Future(Left(x))
+      case Right(x) => {
+        val total = x("count").asInstanceOf[Int]
+        searchAsync(config) { builder =>
+          f(builder)
+          builder.from(0).size(total)
         }
       }
     }
@@ -119,33 +117,25 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAv
   }
 
   def findAsync[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): Future[Option[(String, T)]] = {
-    searchAsync(config)(f).map { result =>
-      result match {
-        case Left(x)  => throw new RuntimeException(x("error").toString)
-        case Right(x) => {
-          val hits = x("hits").asInstanceOf[Map[String, Any]]("hits").asInstanceOf[Seq[Map[String, Any]]]
-          if(hits.length == 0){
-            None
-          } else {
-            Some((hits.head("_id").toString, JsonUtils.deserialize[T](JsonUtils.serialize(getDocumentMap(hits.head)))))
-          }
-        }
+    searchAsync(config)(f).map {
+      case Left(x)  => throw new RuntimeException(x("error").toString)
+      case Right(x) => {
+        val hits = x("hits").asInstanceOf[Map[String, Any]]("hits").asInstanceOf[Seq[Map[String, Any]]]
+        hits.headOption.map(doc => (doc("_id").toString, JsonUtils.deserialize[T](JsonUtils.serialize(getDocumentMap(doc)))))
       }
     }
   }
 
   def findAsListAsync[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): Future[List[(String, T)]] = {
-    searchAsync(config)(f).map { result =>
-      result match {
-        case Left(x)  => throw new RuntimeException(x("error").toString)
-        case Right(x) => createESSearchResult(x).list.map { x => (x.id, x.doc) }
-      }
+    searchAsync(config)(f).map {
+      case Left(x)  => throw new RuntimeException(x("error").toString)
+      case Right(x) => createESSearchResult(x).list.map { x => (x.id, x.doc) }
     }
   }
 
   def findAllAsListAsync[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): Future[List[(String, T)]] = {
-    findAsListAsync(config){ builder =>
-      countAsIntAsync(config)(f).map { count =>
+    countAsIntAsync(config)(f).flatMap { count =>
+      findAsListAsync(config) { builder =>
         f(builder)
         builder.from(0).size(count)
       }
@@ -153,17 +143,15 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAv
   }
 
   def listAsync[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): Future[ESSearchResult[T]] = {
-    searchAsync(config)(f).map { result =>
-      result match {
-        case Left(x)  => throw new RuntimeException(x("error").toString)
-        case Right(x) => createESSearchResult(x)
-      }
+    searchAsync(config)(f).map {
+      case Left(x)  => throw new RuntimeException(x("error").toString)
+      case Right(x) => createESSearchResult(x)
     }
   }
 
   def listAllAsync[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): Future[ESSearchResult[T]] = {
-    listAsync(config){ builder =>
-      countAsIntAsync(config)(f).map { count =>
+    countAsIntAsync(config)(f).flatMap { count =>
+      listAsync(config) { builder =>
         f(builder)
         builder.from(0).size(count)
       }
@@ -176,11 +164,9 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAv
    */
   def listByTemplateAsync[T](config: ESConfig)(lang: String, template: String, params: AnyRef)(implicit c: ClassTag[T]): Future[ESSearchResult[T]] = {
     if(scriptTemplateIsAvailable){
-      searchByTemplateAsync(config)(lang, template, params).map { result =>
-        result match {
-          case Left(x)  => throw new RuntimeException(x("error").toString)
-          case Right(x) => createESSearchResult(x)
-        }
+      searchByTemplateAsync(config)(lang, template, params).map {
+        case Left(x)  => throw new RuntimeException(x("error").toString)
+        case Right(x) => createESSearchResult(x)
       }
     } else {
       throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")
@@ -256,11 +242,9 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAv
   }
 
   def countAsIntAsync(config: ESConfig)(f: SearchDslBuilder => Unit): Future[Int] = {
-    countAsync(config)(f).map { result =>
-      result match {
-        case Left(x)  => throw new RuntimeException(x("error").toString)
-        case Right(x) => x("count").asInstanceOf[Int]
-      }
+    countAsync(config)(f).map {
+      case Left(x)  => throw new RuntimeException(x("error").toString)
+      case Right(x) => x("count").asInstanceOf[Int]
     }
   }
 
@@ -282,11 +266,9 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAv
    */
   def countByTemplateAsIntAsync(config: ESConfig)(lang: String, template: String, params: AnyRef): Future[Int] = {
     if(scriptTemplateIsAvailable){
-      countByTemplateAsync(config)(lang: String, template: String, params: AnyRef).map { result =>
-        result match {
-          case Left(x)  => throw new RuntimeException(x("error").toString)
-          case Right(x) => x("hits").asInstanceOf[Map[String, Any]]("total").asInstanceOf[Int]
-        }
+      countByTemplateAsync(config)(lang, template, params).map {
+        case Left(x)  => throw new RuntimeException(x("error").toString)
+        case Right(x) => x("hits").asInstanceOf[Map[String, Any]]("total").asInstanceOf[Int]
       }
     } else {
       throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")
