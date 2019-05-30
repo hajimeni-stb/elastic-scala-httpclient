@@ -5,7 +5,8 @@ Elasticsearch HTTP client for Scala with code generator.
 
 |Client version |Elasticsearch |Scala version |
 |---------------|--------------|--------------|
-|3.0.0 -        |5.2.x -       |2.11 / 2.12   |
+|4.0.0 -        |6.7.x -       |2.11 / 2.12   |
+|3.0.0 - 3.2.4  |5.2.x -       |2.11 / 2.12   |
 |2.0.4 - 2.0.6  |2.3.5         |2.12          |
 |2.0.0 - 2.0.3  |2.3.5         |2.11          |
 |1.0.6          |1.7.3         |2.11          |
@@ -16,7 +17,7 @@ Elasticsearch HTTP client for Scala with code generator.
 Add a following dependency into your `build.sbt` at first.
 
 ```scala
-libraryDependencies += "jp.co.bizreach" %% "elastic-scala-httpclient" % "3.2.4"
+libraryDependencies += "jp.co.bizreach" %% "elastic-scala-httpclient" % "4.0.0"
 ```
 
 You can access Elasticsearch via HTTP Rest API as following:
@@ -28,7 +29,7 @@ case class TweetMessage(message: String)
 import jp.co.bizreach.elasticsearch4s._
 
 ESClient.using("http://localhost:9200"){ client =>
-  val config = "twitter" / "tweet"
+  val config = ESConfig("twitter")
 
   // Insert
   client.insert(config, Tweet("takezoe", "Hello World!!"))
@@ -45,7 +46,7 @@ ESClient.using("http://localhost:9200"){ client =>
   // Delete
   client.delete(config, "1")
 
-  // Find one document
+  // Find a document
   val tweet: Option[(String, Tweet)] = client.find[Tweet](config){ builder =>
     builder.query(termQuery("_id", "1"))
   }
@@ -64,7 +65,7 @@ If you have to recycle `ESClient` instance, you can manage lyfecycle of `ESClien
 ESClient.init()
 
 val client = ESClient("http://localhost:9200")
-val config = "twitter" / "tweet"
+val config = ESConfig("twitter")
 
 client.insert(config, Tweet("takezoe", "Hello World!!"))
 
@@ -73,8 +74,6 @@ ESClient.shutdown()
 ```
 
 [AsyncESClient](https://github.com/bizreach/elastic-scala-httpclient/blob/master/elastic-scala-httpclient/src/main/scala/jp/co/bizreach/elasticsearch4s/AsyncESClient.scala) that is an asynchrnous version of ESClient is also available. All methods of `AsyncESClient` returns `Future`.
-
-elastic-scala-httpclient is a wrapper of Elasticsearch Java API. Therefore see [its document]( http://www.elasticsearch.org/guide/en/elasticsearch/client/java-api/current/) to know details, especially how to build query.
 
 ## Addtional requirements
 
