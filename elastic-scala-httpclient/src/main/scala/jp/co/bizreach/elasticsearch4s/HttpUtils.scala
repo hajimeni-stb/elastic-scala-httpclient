@@ -1,6 +1,10 @@
 package jp.co.bizreach.elasticsearch4s
 
-import com.ning.http.client._
+import java.nio.charset.StandardCharsets
+
+import org.asynchttpclient.{AsyncCompletionHandler, AsyncHttpClient, AsyncHttpClientConfig, Response}
+import org.asynchttpclient.Dsl._
+
 import scala.concurrent._
 import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
@@ -18,8 +22,7 @@ class HttpResponseException(status: Int, headers: Seq[(String, String)], body: S
   def this(response: Response) = {
     this(
       status  = response.getStatusCode,
-      headers = response.getHeaders.asInstanceOf[java.util.Map[String, java.util.List[String]]]
-        .asScala.map { case (key, values) => (key, values.asScala.mkString(", ")) }.toSeq,
+      headers = response.getHeaders.entries().asScala.map { entry => (entry.getKey, entry.getValue) },
       body    = response.getResponseBody
     )
   }
@@ -35,11 +38,11 @@ object HttpUtils {
 
 
   def createHttpClient(): AsyncHttpClient = {
-    new AsyncHttpClient()
+    asyncHttpClient()
   }
 
-  def createHttpClient(builder: AsyncHttpClientConfig): AsyncHttpClient = {
-    new AsyncHttpClient(builder)
+  def createHttpClient(config: AsyncHttpClientConfig): AsyncHttpClient = {
+    asyncHttpClient(config)
   }
 
   def closeHttpClient(httpClient: AsyncHttpClient): Unit = {
@@ -53,7 +56,7 @@ object HttpUtils {
         .setBody(json.getBytes("UTF-8")).execute()
       val response = f.get()
       if (response.getStatusCode >= 200 && response.getStatusCode < 300){
-        response.getResponseBody("UTF-8")
+        response.getResponseBody(StandardCharsets.UTF_8)
       } else {
         throw new HttpResponseException(response)
       }
@@ -77,7 +80,7 @@ object HttpUtils {
         .setBody(json.getBytes("UTF-8")).execute()
       val response = f.get()
       if (response.getStatusCode >= 200 && response.getStatusCode < 300) {
-        response.getResponseBody("UTF-8")
+        response.getResponseBody(StandardCharsets.UTF_8)
       } else {
         throw new HttpResponseException(response)
       }
@@ -99,7 +102,7 @@ object HttpUtils {
       val f = httpClient.prepareGet(url).execute()
       val response = f.get()
       if (response.getStatusCode >= 200 && response.getStatusCode < 300) {
-        response.getResponseBody("UTF-8")
+        response.getResponseBody(StandardCharsets.UTF_8)
       } else {
         throw new HttpResponseException(response)
       }
@@ -123,7 +126,7 @@ object HttpUtils {
         builder.setHeader("Content-Type", contentType).setBody(json.getBytes("UTF-8"))
       }
       val f = builder.execute()
-      f.get().getResponseBody("UTF-8")
+      f.get().getResponseBody(StandardCharsets.UTF_8)
     }
   }
 
@@ -154,7 +157,7 @@ object HttpUtils {
     override def onCompleted(response: Response): Unit = {
       try {
         if (response.getStatusCode >= 200 && response.getStatusCode < 300) {
-          promise.success(response.getResponseBody("UTF-8"))
+          promise.success(response.getResponseBody(StandardCharsets.UTF_8))
         } else {
           promise.failure(new HttpResponseException(response))
         }

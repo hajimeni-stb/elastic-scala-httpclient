@@ -20,18 +20,14 @@
     }
   },
   "mappings": {
-    "my_type" : {
+    "blog" : {
       "properties" : {
-        "blog" : {
-          "properties" : {
-            "subject" : {
-              "type" : "string"
-            },
-            "content" : {
-              "type" : "string",
-              "analyzer": "bigram_analyzer"
-            }
-          }
+        "subject" : {
+          "type" : "text"
+        },
+        "content" : {
+          "type" : "text",
+          "analyzer": "bigram_analyzer"
         }
       }
     }

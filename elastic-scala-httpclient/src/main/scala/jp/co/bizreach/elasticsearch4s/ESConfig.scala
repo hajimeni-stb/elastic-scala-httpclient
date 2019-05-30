@@ -12,7 +12,16 @@ case class ESConfig(indexName: String, typeName: Option[String] = None, preferen
   }
 
   /**
-   * Returns the specified API URL with preference.
+   * Returns the URL for document APIs (e.g. Index API, Delete API).
+   */
+  def documentUrl(baseUrl: String) = typeName.map { typeName =>
+    s"${baseUrl}/${indexName}/${typeName}"
+  }.getOrElse {
+    s"${baseUrl}/${indexName}/_doc"
+  }
+
+  /**
+   * Returns the URL with a preference parameter for search APIs.
    */
   def preferenceUrl(baseUrl: String, path: String) = {
     val u = url(baseUrl) + "/" + path
@@ -22,7 +31,7 @@ case class ESConfig(indexName: String, typeName: Option[String] = None, preferen
   }
 
   /**
-   * Returns the specified API URL with received parameters.
+   * Returns the URL with request parameters for search APIs.
    */
   def urlWithParameters(baseUrl: String, path: String) = {
     val u = url(baseUrl) + "/" + path
@@ -48,21 +57,7 @@ object ESConfig {
   /**
    * Creates ESConfig instance with index name and type name.
    */
+  @deprecated("Types will be deprecated in APIs in Elasticsearch 7.0.0, and completely removed in 8.0.0.", "4.0.0")
   def apply(indexName: String, typeName: String): ESConfig = ESConfig(indexName, Some(typeName))
-
-  /**
-   * Creates ESConfig instance with index name, type name and preference.
-   */
-  def apply(indexName: String, typeName: String, preference: String): ESConfig = ESConfig(indexName, Some(typeName), Some(preference))
-
-  /**
-   * Creates ESConfig instance with index name, type name, preference and explain.
-   */
-  def apply(indexName: String, typeName: String, preference: String, explain: Boolean): ESConfig = ESConfig(indexName, Some(typeName), Some(preference), explain)
-
-  /**
-   * Creates ESConfig instance with index name, type name, preference, explain and timeout.
-   */
-  def apply(indexName: String, typeName: String, preference: String, explain: Boolean, timeout: Int): ESConfig = ESConfig(indexName, Some(typeName), Some(preference), explain, Some(timeout))
 
 }

@@ -2,24 +2,20 @@ name := "elastic-scala-httpclient"
 
 organization := "jp.co.bizreach"
 
-version := "3.2.5-SNAPSHOT"
+version := "4.0.0-SNAPSHOT"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.8"
 
-crossScalaVersions := Seq("2.11.8", "2.12.3")
+crossScalaVersions := Seq("2.11.12", scalaVersion.value)
 
 libraryDependencies ++= Seq(
-  "org.codelibs"                      %  "elasticsearch-querybuilders"  % "5.2.1",
-  "org.slf4j"                         %  "slf4j-api"                    % "1.7.21",
-  "joda-time"                         %  "joda-time"                    % "2.9.6",
-  "org.joda"                          %  "joda-convert"                 % "1.8.1",
-  "commons-io"                        %  "commons-io"                   % "2.5",
-  "com.ning"                          %  "async-http-client"            % "1.9.40",
-  "com.fasterxml.jackson.module"      %% "jackson-module-scala"         % "2.8.4",
-  "org.codelibs"                      %  "elasticsearch-cluster-runner" % "5.5.0.0" % "test",
-  "org.codelibs.elasticsearch.module" %  "lang-groovy"                  % "5.5.0"   % "test",
-  "org.codelibs"                      %  "elasticsearch-sstmpl"         % "5.5.0"   % "test",
-  "org.scalatest"                     %% "scalatest"                    % "3.0.1"   % "test"
+  "org.slf4j"                    %  "slf4j-api"            % "1.7.26",
+  "org.asynchttpclient"          %  "async-http-client"    % "2.9.0",
+  "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.9",
+  "org.elasticsearch"            %  "elasticsearch"        % "6.7.2",
+  "org.codelibs"                 %  "elasticsearch-cluster-runner" % "6.7.2.0" % "test",
+  "org.codelibs"                 %  "elasticsearch-sstmpl"         % "6.7.0"   % "test",
+  "org.scalatest"                %% "scalatest"                    % "3.0.7"   % "test"
 )
 
 publishMavenStyle := true
@@ -34,7 +30,7 @@ publishTo := {
 
 scalacOptions := Seq("-deprecation")
 
-javacOptions in compile ++= Seq("-source","1.7", "-target","1.7", "-encoding","UTF-8")
+javacOptions in compile ++= Seq("-source","1.8", "-target","1.8", "-encoding","UTF-8")
 
 publishArtifact in Test := false
 

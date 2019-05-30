@@ -6,11 +6,11 @@ import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
 import scala.annotation.tailrec
-import com.ning.http.client.{AsyncHttpClient, AsyncHttpClientConfig}
+import scala.concurrent.duration.Duration
 import jp.co.bizreach.elasticsearch4s.retry.{FixedBackOff, RetryConfig}
-import org.codelibs.elasticsearch.querybuilders.SearchDslBuilder
 
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import org.asynchttpclient.{AsyncHttpClient, AsyncHttpClientConfig}
+import org.elasticsearch.search.builder.SearchSourceBuilder
 
 /**
  * Helper for accessing to Elasticsearch.
@@ -25,11 +25,11 @@ object ESClient {
    */
   def using[T](
     url: String,
-    config: AsyncHttpClientConfig = new AsyncHttpClientConfig.Builder().build(),
+    config: AsyncHttpClientConfig = org.asynchttpclient.Dsl.config().build(),
     scriptTemplateIsAvailable: Boolean = false,
     retryConfig: RetryConfig = RetryConfig(0, Duration.Zero, FixedBackOff)
   )(f: ESClient => T): T = {
-    val httpClient = new AsyncHttpClient(config)
+    val httpClient = HttpUtils.createHttpClient(config)
     val client = new ESClient(httpClient, url, scriptTemplateIsAvailable)(retryConfig)
     try {
       f(client)
@@ -46,7 +46,7 @@ object ESClient {
   }
 
   /**
-   * Return ESClient instance.
+   * Returns ESClient instance.
    */
   def apply(
     url: String,
@@ -78,12 +78,10 @@ object ESClient {
 
 class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailable: Boolean = false)(implicit val retryConfig: RetryConfig) {
 
-  //private val queryClient = new QueryBuilderClient()
-
   def insertJson(config: ESConfig, json: String): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug(s"insertJson:\n${json}")
 
-    val resultJson = HttpUtils.post(httpClient, config.url(url), json)
+    val resultJson = HttpUtils.post(httpClient, config.documentUrl(url), json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
@@ -91,7 +89,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   def insertJson(config: ESConfig, id: String, json: String): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug(s"insertJson:\n${json}")
 
-    val resultJson = HttpUtils.post(httpClient, config.url(url) + "/" + id, json)
+    val resultJson = HttpUtils.put(httpClient, config.documentUrl(url) + "/" + id, json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
@@ -107,7 +105,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   def updateJson(config: ESConfig, id: String, json: String): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug(s"updateJson:\n${json}")
 
-    val resultJson = HttpUtils.put(httpClient, config.url(url) + "/" + id, json)
+    val resultJson = HttpUtils.put(httpClient, config.documentUrl(url) + "/" + id, json)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
@@ -119,7 +117,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   def updatePartiallyJson(config: ESConfig, id: String, json: String): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug(s"updatePartiallyJson:\n${json}")
 
-    val resultJson = HttpUtils.post(httpClient, config.url(url) + "/" + id + "/_update", "{\"doc\":"+ s"${json}}")
+    val resultJson = HttpUtils.post(httpClient, config.documentUrl(url) + "/" + id + "/_update", "{\"doc\":"+ s"${json}}")
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
@@ -131,20 +129,14 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   def delete(config: ESConfig, id: String): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug(s"delete id:\n${id}")
 
-    val resultJson = HttpUtils.delete(httpClient, config.url(url) + "/" + id)
+    val resultJson = HttpUtils.delete(httpClient, config.documentUrl(url) + "/" + id)
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
-  /**
-   * Note: Need delete-by-query plugin to use this method.
-   * https://www.elastic.co/guide/en/elasticsearch/plugins/2.3/plugins-delete-by-query.html
-   */
-  def deleteByQuery(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+  def deleteByQuery(config: ESConfig)(f: SearchSourceBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug("******** ESConfig:" + config.toString)
-    val builder = SearchDslBuilder.builder()
-    f(builder)
-    val json = builder.build()
+    val json = toJson(f)
     logger.debug(s"deleteByQuery:${json}")
 
     val resultJson = HttpUtils.post(httpClient, config.url(url) + "/_delete_by_query", json)
@@ -152,11 +144,9 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
-  def count(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+  def count(config: ESConfig)(f: SearchSourceBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug("******** ESConfig:" + config.toString)
-    val builder = SearchDslBuilder.builder()
-    f(builder)
-    val json = builder.build()
+    val json = toJson(f)
     logger.debug(s"countRequest:${json}")
 
     val resultJson = HttpUtils.post(httpClient, config.preferenceUrl(url, "_count"), json)
@@ -164,20 +154,20 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
-  def countAsInt(config: ESConfig)(f: SearchDslBuilder => Unit): Int = {
+  def countAsInt(config: ESConfig)(f: SearchSourceBuilder => Unit): Int = {
     count(config)(f) match {
       case Left(x)  => throw new RuntimeException(x("error").toString)
       case Right(x) => x("count").asInstanceOf[Int]
     }
   }
 
-  private def toJson(f: SearchDslBuilder => Unit): String = {
-    val builder = SearchDslBuilder.builder()
+  private def toJson(f: SearchSourceBuilder => Unit): String = {
+    val builder = new SearchSourceBuilder()
     f(builder)
-    builder.build()
+    builder.toString
   }
 
-  def search(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+  def search(config: ESConfig)(f: SearchSourceBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
     logger.debug("******** ESConfig:" + config.toString)
     val json = toJson(f)
     logger.debug(s"searchRequest:${json}")
@@ -194,7 +184,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
   }
 
-  def searchAll(config: ESConfig)(f: SearchDslBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
+  def searchAll(config: ESConfig)(f: SearchSourceBuilder => Unit): Either[Map[String, Any], Map[String, Any]] = {
     count(config)(f) match {
       case Left(x)  => Left(x)
       case Right(x) => {
@@ -211,13 +201,12 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
    * Note: Need elasticsearch-sstmpl plugin to use this method.
    * https://github.com/codelibs/elasticsearch-sstmpl
    */
-  def searchByTemplate(config: ESConfig)(lang: String, template: String, params: AnyRef, options: Option[String] = None): Either[Map[String, Any], Map[String, Any]] = {
+  def searchByTemplate(config: ESConfig)(template: String, params: AnyRef, options: Option[String] = None): Either[Map[String, Any], Map[String, Any]] = {
     if(scriptTemplateIsAvailable) {
       logger.debug("******** ESConfig:" + config.toString)
       val json = JsonUtils.serialize(
         Map(
-          "lang" -> lang,
-          "file" -> template,
+          "id" -> template,
           "params" -> params
         )
       )
@@ -231,7 +220,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-  def find[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): Option[(String, T)] = {
+  def find[T](config: ESConfig)(f: SearchSourceBuilder => Unit)(implicit c: ClassTag[T]): Option[(String, T)] = {
     findJson(config)(toJson(f))
   }
 
@@ -249,7 +238,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-  def findAsList[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
+  def findAsList[T](config: ESConfig)(f: SearchSourceBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
     findAsListJson(config)(toJson(f))
   }
 
@@ -260,7 +249,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-  def findAllAsList[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
+  def findAllAsList[T](config: ESConfig)(f: SearchSourceBuilder => Unit)(implicit c: ClassTag[T]): List[(String, T)] = {
     findAsList(config){ builder =>
       f(builder)
       builder.from(0).size(countAsInt(config)(f))
@@ -268,7 +257,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
   }
 
 
-  def list[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
+  def list[T](config: ESConfig)(f: SearchSourceBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
     listJson(config)(toJson(f))
   }
 
@@ -279,7 +268,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-  def listAll[T](config: ESConfig)(f: SearchDslBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
+  def listAll[T](config: ESConfig)(f: SearchSourceBuilder => Unit)(implicit c: ClassTag[T]): ESSearchResult[T] = {
     list(config){ builder =>
       f(builder)
       builder.from(0).size(countAsInt(config)(f))
@@ -290,9 +279,9 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
    * Note: Need elasticsearch-sstmpl plugin to use this method.
    * https://github.com/codelibs/elasticsearch-sstmpl
    */
-  def listByTemplate[T](config: ESConfig)(lang: String, template: String, params: AnyRef)(implicit c: ClassTag[T]): ESSearchResult[T] = {
+  def listByTemplate[T](config: ESConfig)(template: String, params: AnyRef)(implicit c: ClassTag[T]): ESSearchResult[T] = {
     if(scriptTemplateIsAvailable) {
-      searchByTemplate(config)(lang, template, params) match {
+      searchByTemplate(config)(template, params) match {
         case Left(x)  => throw new RuntimeException(x("error").toString)
         case Right(x) => createESSearchResult(x)
       }
@@ -305,9 +294,9 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
    * Note: Need elasticsearch-sstmpl plugin to use this method.
    * https://github.com/codelibs/elasticsearch-sstmpl
    */
-  def countByTemplate(config: ESConfig)(lang: String, template: String, params: AnyRef): Either[Map[String, Any], Map[String, Any]] = {
+  def countByTemplate(config: ESConfig)(template: String, params: AnyRef): Either[Map[String, Any], Map[String, Any]] = {
     if(scriptTemplateIsAvailable) {
-      searchByTemplate(config)(lang, template, params, Some("?search_type=query_then_fetch&size=0"))
+      searchByTemplate(config)(template, params, Some("?search_type=query_then_fetch&size=0"))
     } else {
       throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")
     }
@@ -317,9 +306,9 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
    * Note: Need elasticsearch-sstmpl plugin to use this method.
    * https://github.com/codelibs/elasticsearch-sstmpl
    */
-  def countByTemplateAsInt(config: ESConfig)(lang: String, template: String, params: AnyRef): Int = {
+  def countByTemplateAsInt(config: ESConfig)(template: String, params: AnyRef): Int = {
     if(scriptTemplateIsAvailable) {
-      countByTemplate(config)(lang: String, template: String, params: AnyRef) match {
+      countByTemplate(config)(template: String, params: AnyRef) match {
         case Left(x)  => throw new RuntimeException(x("error").toString)
         case Right(x) => x("hits").asInstanceOf[Map[String, Any]]("total").asInstanceOf[Int]
       }
@@ -328,7 +317,7 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-  def refresh(config: ESConfig)(): Either[Map[String, Any], Map[String, Any]] = {
+  def refresh(config: ESConfig): Either[Map[String, Any], Map[String, Any]] = {
     val resultJson = HttpUtils.post(httpClient, s"${url}/${config.indexName}/_refresh", "")
     val map = JsonUtils.deserialize[Map[String, Any]](resultJson)
     map.get("error").map { _ => Left(map) }.getOrElse(Right(map))
@@ -339,11 +328,9 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     JsonUtils.deserialize[Map[String, Any]](resultJson)
   }
 
-  def scroll[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+  def scroll[T, R](config: ESConfig)(f: SearchSourceBuilder => Unit)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     logger.debug("******** ESConfig:" + config.toString)
-    val builder = SearchDslBuilder.builder()
-    f(builder)
-    val json = builder.build()
+    val json = toJson(f)
     logger.debug(s"searchRequest:${json}")
 
     _scroll0(true, config.url(url) + "/_search", json, Stream.empty,
@@ -354,13 +341,12 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
    * Note: Need elasticsearch-sstmpl plugin to use this method.
    * https://github.com/codelibs/elasticsearch-sstmpl
    */
-  def scrollByTemplate[T, R](config: ESConfig)(lang: String, template: String, params: AnyRef)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+  def scrollByTemplate[T, R](config: ESConfig)(template: String, params: AnyRef)(p: (String, T) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     if(scriptTemplateIsAvailable) {
       logger.debug("******** ESConfig:" + config.toString)
       val json = JsonUtils.serialize(
         Map(
-          "lang" -> lang,
-          "file" -> template,
+          "id" -> template,
           "params" -> params
         )
       )
@@ -395,11 +381,9 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     }
   }
 
-  def scrollChunk[T, R](config: ESConfig)(f: SearchDslBuilder => Unit)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+  def scrollChunk[T, R](config: ESConfig)(f: SearchSourceBuilder => Unit)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     logger.debug("******** ESConfig:" + config.toString)
-    val builder = SearchDslBuilder.builder()
-    f(builder)
-    val json = builder.build()
+    val json = toJson(f)
     logger.debug(s"searchRequest:${json}")
 
     _scrollChunk0(true, config.url(url) + "/_search", json, Stream.empty,
@@ -413,13 +397,12 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
    * Note: Need elasticsearch-sstmpl plugin to use this method.
    * https://github.com/codelibs/elasticsearch-sstmpl
    */
-  def scrollChunkByTemplate[T, R](config: ESConfig)(lang: String, template: String, params: AnyRef)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
+  def scrollChunkByTemplate[T, R](config: ESConfig)(template: String, params: AnyRef)(p: (Seq[(String, T)]) => R)(implicit c1: ClassTag[T], c2: ClassTag[R]): Stream[R] = {
     if(scriptTemplateIsAvailable) {
       logger.debug("******** ESConfig:" + config.toString)
       val json = JsonUtils.serialize(
         Map(
-          "lang" -> lang,
-          "file" -> template,
+          "id" -> template,
           "params" -> params
         )
       )

@@ -8,30 +8,37 @@ sealed trait BulkAction {
 
 object BulkAction {
 
-  case class Create(config: ESConfig, doc: AnyRef, id: Option[String] = None) extends BulkAction {
+  case class Index(config: ESConfig, doc: AnyRef) extends BulkAction {
     def jsonString: String = {
-      s"""{ "create" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("")}"${id.map(_id => s""", "_id": "${_id}"""").getOrElse("")} } }
+      s"""{ "index" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("_doc")}" } }
+         |${singleLine(serialize(doc))}""".stripMargin
+    }
+  }
+
+  case class Create(config: ESConfig, doc: AnyRef, id: String) extends BulkAction {
+    def jsonString: String = {
+      s"""{ "create" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("_doc")}", "_id": "${id}"} }
          |${singleLine(serialize(doc))}""".stripMargin
     }
   }
 
   case class Update(config: ESConfig, doc: AnyRef, id: String) extends BulkAction {
     def jsonString: String = {
-      s"""{ "update" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("")}", "_id": "${id}"} } }
+      s"""{ "update" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("_doc")}", "_id": "${id}"} }
          |{ "doc": ${singleLine(serialize(doc))} }""".stripMargin
     }
   }
 
   case class Script(config: ESConfig, script: String, id: String) extends BulkAction {
     def jsonString: String = {
-      s"""{ "update" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("")}", "_id": "${id}"} } }
+      s"""{ "update" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("_doc")}", "_id": "${id}"} }
          |{ "script": ${script} }""".stripMargin
     }
   }
 
   case class Delete(config: ESConfig, id: String) extends BulkAction {
     def jsonString: String = {
-      s"""{ "delete" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("")}", "_id": "${id}"} } }"""
+      s"""{ "delete" : { "_index" : "${config.indexName}", "_type" : "${config.typeName.getOrElse("_doc")}", "_id": "${id}"} }"""
     }
   }
 
