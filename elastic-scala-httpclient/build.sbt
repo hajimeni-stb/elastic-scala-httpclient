@@ -2,7 +2,7 @@ name := "elastic-scala-httpclient"
 
 organization := "jp.co.bizreach"
 
-version := "4.0.0-SNAPSHOT"
+version := "4.0.0"
 
 scalaVersion := "2.12.8"
 
