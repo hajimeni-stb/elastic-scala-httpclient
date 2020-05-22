@@ -20,15 +20,13 @@
     }
   },
   "mappings": {
-    "blog" : {
-      "properties" : {
-        "subject" : {
-          "type" : "text"
-        },
-        "content" : {
-          "type" : "text",
-          "analyzer": "bigram_analyzer"
-        }
+    "properties" : {
+      "subject" : {
+        "type" : "text"
+      },
+      "content" : {
+        "type" : "text",
+        "analyzer": "bigram_analyzer"
       }
     }
   }

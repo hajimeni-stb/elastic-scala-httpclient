@@ -40,9 +40,8 @@ class IntegrationTest extends FunSuite with BeforeAndAfter with BeforeAndAfterAl
     runner.onBuild((number: Int, settingsBuilder: Builder) => {
         settingsBuilder.put("http.cors.enabled", true)
         settingsBuilder.put("http.cors.allow-origin", "*")
-        settingsBuilder.putList("discovery.zen.ping.unicast.hosts", "localhost:9301-9310")
       }
-    ).build(ElasticsearchClusterRunner.newConfigs().baseHttpPort(9200).baseTransportPort(9300).numOfNode(1)
+    ).build(ElasticsearchClusterRunner.newConfigs().baseHttpPort(9200).numOfNode(1)
       .basePath(esHomeDir.getAbsolutePath())
       .pluginTypes(classOf[ScriptTemplatePlugin].getName))
 
@@ -247,6 +246,8 @@ class IntegrationTest extends FunSuite with BeforeAndAfter with BeforeAndAfterAl
       assert(result.list.size == 1)
       assert(result.list(0).doc == Blog("[10]Hello World!", "This is a first registration test!", 20171013))
       assert(result.list(0).sort == Nil)
+      assert(result.total.value == 1)
+      assert(result.total.relation == "eq")
     }
 
     // Scroll search

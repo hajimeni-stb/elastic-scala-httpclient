@@ -310,7 +310,9 @@ class ESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAvailab
     if(scriptTemplateIsAvailable) {
       countByTemplate(config)(template: String, params: AnyRef) match {
         case Left(x)  => throw new RuntimeException(x("error").toString)
-        case Right(x) => x("hits").asInstanceOf[Map[String, Any]]("total").asInstanceOf[Int]
+        case Right(x) =>
+          val totalMap = x("hits").asInstanceOf[Map[String, Any]]("total").asInstanceOf[Map[String, Any]]
+          ESSearchResultTotal(totalMap).value
       }
     } else {
       throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")

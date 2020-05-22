@@ -279,7 +279,9 @@ class AsyncESClient(httpClient: AsyncHttpClient, url: String, scriptTemplateIsAv
     if(scriptTemplateIsAvailable){
       countByTemplateAsync(config)(template, params).map {
         case Left(x)  => throw new RuntimeException(x("error").toString)
-        case Right(x) => x("hits").asInstanceOf[Map[String, Any]]("total").asInstanceOf[Int]
+        case Right(x) =>
+          val totalMap = x("hits").asInstanceOf[Map[String, Any]]("total").asInstanceOf[Map[String, Any]]
+          ESSearchResultTotal(totalMap).value
       }
     } else {
       throw new UnsupportedOperationException("You can install elasticsearch-sstmpl plugin to use this method.")

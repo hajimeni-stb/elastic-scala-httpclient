@@ -2,20 +2,20 @@ name := "elastic-scala-httpclient"
 
 organization := "jp.co.bizreach"
 
-version := "4.0.1-SNAPSHOT"
+version := "5.0.0-SNAPSHOT"
 
 scalaVersion := "2.12.8"
 
 crossScalaVersions := Seq("2.11.12", scalaVersion.value)
 
 libraryDependencies ++= Seq(
-  "org.slf4j"                    %  "slf4j-api"            % "1.7.26",
-  "org.asynchttpclient"          %  "async-http-client"    % "2.9.0",
+  "org.slf4j" % "slf4j-api" % "1.7.26",
+  "org.asynchttpclient" % "async-http-client" % "2.9.0",
   "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.9",
-  "org.elasticsearch"            %  "elasticsearch"        % "6.7.2",
-  "org.codelibs"                 %  "elasticsearch-cluster-runner" % "6.7.2.0" % "test",
-  "org.codelibs"                 %  "elasticsearch-sstmpl"         % "6.7.0"   % "test",
-  "org.scalatest"                %% "scalatest"                    % "3.0.7"   % "test"
+  "org.elasticsearch" % "elasticsearch" % "7.6.0",
+  "org.codelibs" % "elasticsearch-cluster-runner" % "7.6.0.0" % "test",
+  "org.codelibs" % "elasticsearch-sstmpl" % "7.6.0" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.7" % "test"
 )
 
 publishMavenStyle := true
@@ -25,19 +25,27 @@ publishTo := {
   if (version.value.trim.endsWith("SNAPSHOT"))
     Some("snapshots" at nexus + "content/repositories/snapshots")
   else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+    Some("releases" at nexus + "service/local/staging/deploy/maven2")
 }
 
 scalacOptions := Seq("-deprecation")
 
-javacOptions in compile ++= Seq("-source","1.8", "-target","1.8", "-encoding","UTF-8")
+javacOptions in compile ++= Seq(
+  "-source",
+  "1.8",
+  "-target",
+  "1.8",
+  "-encoding",
+  "UTF-8"
+)
 
 publishArtifact in Test := false
 
-pomIncludeRepository := { _ => false }
+pomIncludeRepository := { _ =>
+  false
+}
 
-pomExtra := (
-  <url>https://github.com/bizreach/elastic-scala-httpclient</url>
+pomExtra := (<url>https://github.com/bizreach/elastic-scala-httpclient</url>
     <licenses>
       <license>
         <name>The Apache Software License, Version 2.0</name>
